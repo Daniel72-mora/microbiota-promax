@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://tu-usuario.github.io/microbiota-app",
+  "homepage": "https://Daniel72-mora.github.io/microbiota-promax",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
