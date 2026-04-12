@@ -4,6 +4,28 @@ import {
   Dna, Apple, ListTodo
 } from 'lucide-react';
 
+// 1. Recomendaciones personalizadas según el puntaje
+const dietaryAdvice = {
+  eubiosis: {
+    color: "#16a34a",
+    title: "¡Estado Óptimo de Eubiosis!",
+    desc: "Tu microbiota está equilibrada y diversa. Estás produciendo suficientes AGCC (Butirato) para proteger tu barrera intestinal y regular tu sistema inmune.",
+    tips: ["Sigue consumiendo MACs (Fibra fermentable)", "Mantén la variedad de polifenoles (frutos rojos, té)", "¡Excelente trabajo con tu estilo de vida!"]
+  },
+  riesgo: {
+    color: "#ca8a04",
+    title: "Alerta de Desequilibrio",
+    desc: "Tu diversidad bacteriana podría estar disminuyendo. Hay señales de que factores externos (estrés, dieta) están afectando tu barrera protectora.",
+    tips: ["Aumenta el consumo de prebióticos (ajo, cebolla, alcachofa)", "Reduce los edulcorantes artificiales", "Prioriza el sueño para regular el eje Intestino-Cerebro"]
+  },
+  disbiosis: {
+    color: "#dc2626",
+    title: "Signos de Disbiosis Detectados",
+    desc: "Es probable que tu permeabilidad intestinal esté aumentada. Existe riesgo de endotoxemia metabólica e inflamación crónica de bajo grado.",
+    tips: ["Elimina ultraprocesados y harinas refinadas inmediatamente", "Considera probióticos específicos tras consultar al médico", "Aumenta drásticamente el consumo de hojas verdes y legumbres"]
+  }
+};
+
 const stages = [
   { 
     title: "Etapa Neonatal", subtitle: "Los Primeros 1000 Días", 
@@ -69,7 +91,6 @@ function App() {
 
   const isMobile = width < 768;
 
-  // Estados del Juego y Test
   const [quizStep, setQuizStep] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
@@ -90,11 +111,15 @@ function App() {
 
   const handleAnswer = (value) => {
     const newScore = quizScore + value;
-    if (quizStep + 1 < quizQuestions.length) { setQuizScore(newScore); setQuizStep(quizStep + 1); } 
-    else { setQuizScore(newScore); setQuizFinished(true); }
+    if (quizStep + 1 < quizQuestions.length) { 
+      setQuizScore(newScore); 
+      setQuizStep(quizStep + 1); 
+    } else { 
+      setQuizScore(newScore); 
+      setQuizFinished(true); 
+    }
   };
 
-  // FUNCIÓN DE MOVIMIENTO UNIFICADA (HÍBRIDA)
   const moveFood = (food, targetZone) => {
     setAvailableFoods(prev => prev.filter(f => f.id !== food.id));
     setEubiosisZone(prev => prev.filter(f => f.id !== food.id));
@@ -213,23 +238,54 @@ function App() {
             </div>
           </div>
 
-          {/* TEST */}
+          {/* TEST CON RECOMENDACIONES CLARAS */}
           <div style={{ ...cardStyle, background: '#1e293b', color: 'white' }}>
-            <h3 style={{ margin: '0 0 15px 0' }}><ListTodo color="#60a5fa" /> Test de Microbiota</h3>
+            <h3 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ListTodo color="#60a5fa" /> Perfil de Salud Microbiana
+            </h3>
             {!quizFinished ? (
               <div>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Pregunta {quizStep + 1} de 5</p>
-                <h4 style={{ margin: '15px 0' }}>{quizQuestions[quizStep].q}</h4>
+                <div style={{ background: '#334155', height: '6px', borderRadius: '10px', marginBottom: '15px' }}>
+                  <div style={{ 
+                    background: '#60a5fa', 
+                    height: '100%', 
+                    borderRadius: '10px', 
+                    width: `${((quizStep + 1) / quizQuestions.length) * 100}%`,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Análisis: {quizStep + 1} de 5</p>
+                <h4 style={{ margin: '15px 0', lineHeight: '1.4' }}>{quizQuestions[quizStep].q}</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {quizQuestions[quizStep].options.map((opt, idx) => (
-                    <button key={idx} onClick={() => handleAnswer(opt.v)} style={{ background: '#334155', border: '1px solid #475569', color: 'white', padding: '12px', borderRadius: '12px', cursor: 'pointer', textAlign: 'left' }}>{opt.t}</button>
+                    <button key={idx} onClick={() => handleAnswer(opt.v)} style={{ background: '#334155', border: '1px solid #475569', color: 'white', padding: '12px', borderRadius: '12px', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem' }}>{opt.t}</button>
                   ))}
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: 'center' }}>
-                <h3>Resultado: {quizScore >= 8 ? "Eubiosis 🟢" : quizScore >= 4 ? "Riesgo 🟡" : "Disbiosis 🔴"}</h3>
-                <button onClick={() => {setQuizStep(0); setQuizScore(0); setQuizFinished(false);}} style={{ background: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', marginTop: '15px' }}>Reiniciar</button>
+              <div style={{ textAlign: 'left' }}>
+                {(() => {
+                  const result = quizScore >= 8 ? 'eubiosis' : quizScore >= 4 ? 'riesgo' : 'disbiosis';
+                  const advice = dietaryAdvice[result];
+                  return (
+                    <>
+                      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                        <div style={{ display: 'inline-block', padding: '5px 15px', borderRadius: '20px', background: advice.color, fontWeight: '900', fontSize: '0.7rem', marginBottom: '10px' }}>INFORME CLÍNICO</div>
+                        <h2 style={{ margin: 0, color: advice.color }}>{advice.title}</h2>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '15px', marginBottom: '20px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                        {advice.desc}
+                      </div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#60a5fa' }}>Plan de Acción:</h4>
+                        <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.85rem', color: '#cbd5e1' }}>
+                          {advice.tips.map((tip, i) => <li key={i} style={{ marginBottom: '5px' }}>{tip}</li>)}
+                        </ul>
+                      </div>
+                      <button onClick={() => {setQuizStep(0); setQuizScore(0); setQuizFinished(false);}} style={{ width: '100%', background: 'white', border: 'none', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', color: '#1e293b' }}>Reiniciar Análisis</button>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -237,7 +293,7 @@ function App() {
       </main>
 
       <footer style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-        Versión Optimizada para Laura y el equipo de Enfermería.
+        Hecha por Laura
       </footer>
     </div>
   );
