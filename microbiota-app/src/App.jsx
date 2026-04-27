@@ -176,6 +176,1164 @@ const initialFoods = [
   { id: 'f8', name: { es: 'Dulces', en: 'Candy' }, type: 'bad', icon: '🍬', img: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?auto=format&fit=crop&q=80&w=200' },
 ];
 
+// ============================================================
+// 🚂 TREN DE LA MICROBIOTA — MINI JUEGO
+// ============================================================
+const TRAIN_STAGES = [
+  {
+    id: 'neonatal',
+    label: { es: 'Neonatal', en: 'Neonatal' },
+    emoji: '👶',
+    color: '#38bdf8',
+    glow: '#7dd3fc',
+    bacteria: ['Lactobacillus', 'Bifidobacterium', 'Prevotella'],
+    badBacteria: ['E.coli patógeno', 'Staphylococcus aureus', 'Klebsiella'],
+    fact: { es: 'El parto vaginal siembra Lactobacillus que protegen al bebé.', en: 'Vaginal birth seeds Lactobacillus that protect the baby.' },
+    wagons: 3,
+  },
+  {
+    id: 'infancia',
+    label: { es: 'Infancia', en: 'Childhood' },
+    emoji: '🧒',
+    color: '#4ade80',
+    glow: '#86efac',
+    bacteria: ['Bacteroides', 'Faecalibacterium', 'Ruminococcus'],
+    badBacteria: ['Clostridium perfringens', 'Campylobacter', 'Salmonella'],
+    fact: { es: 'La alimentación sólida dispara la diversidad bacteriana.', en: 'Solid food skyrockets bacterial diversity.' },
+    wagons: 4,
+  },
+  {
+    id: 'adultez',
+    label: { es: 'Adultez', en: 'Adulthood' },
+    emoji: '🧑',
+    color: '#fb923c',
+    glow: '#fdba74',
+    bacteria: ['Akkermansia', 'Roseburia', 'Blautia'],
+    badBacteria: ['Fusobacterium', 'Clostridioides diff.', 'Helicobacter'],
+    fact: { es: 'El microbioma adulto produce el 90% de la serotonina corporal.', en: 'The adult microbiome produces 90% of body serotonin.' },
+    wagons: 5,
+  },
+  {
+    id: 'vejez',
+    label: { es: 'Adulto Mayor', en: 'Older Adult' },
+    emoji: '👴',
+    color: '#c084fc',
+    glow: '#d8b4fe',
+    bacteria: ['Christensenellaceae', 'Lachnospiraceae', 'Eubacterium'],
+    badBacteria: ['Proteobacteria exc.', 'C. difficile', 'Enterococcus'],
+    fact: { es: 'Los probióticos multiespecie frenan el Inflammaging.', en: 'Multi-species probiotics slow Inflammaging.' },
+    wagons: 4,
+  },
+];
+
+const ALL_BACTERIA = TRAIN_STAGES.flatMap(s => [
+  ...s.bacteria.map(b => ({ name: b, type: 'good', stage: s.id, color: s.color })),
+  ...s.badBacteria.map(b => ({ name: b, type: 'bad', stage: s.id, color: '#ef4444' })),
+]);
+
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function BacteriaTrainGame({ lang, isMobile }) {
+  const [trainStage, setTrainStage] = useState(0);
+  const [queue, setQueue] = useState(() => shuffle(ALL_BACTERIA).slice(0, 12));
+  const [currentBact, setCurrentBact] = useState(null);
+  const [wagons, setWagons] = useState({ neonatal: [], infancia: [], adultez: [], vejez: [] });
+  const [message, setMessage] = useState(null);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [totalAnswered, setTotalAnswered] = useState(0);
+  const [trainAnim, setTrainAnim] = useState(false);
+  const [selectedWagon, setSelectedWagon] = useState(null);
+  const [bgPulse, setBgPulse] = useState(false);
+
+  useEffect(() => {
+    if (queue.length > 0 && !currentBact) {
+      setCurrentBact(queue[0]);
+      setQueue(q => q.slice(1));
+    } else if (queue.length === 0 && !currentBact && totalAnswered > 0) {
+      setGameOver(true);
+    }
+  }, [queue, currentBact]);
+
+  const handleDrop = (stageId) => {
+    if (!currentBact) return;
+    const stage = TRAIN_STAGES.find(s => s.id === stageId);
+    const isCorrect = currentBact.stage === stageId && currentBact.type === 'good';
+    
+    setWagons(prev => ({ ...prev, [stageId]: [...(prev[stageId] || []), { ...currentBact, correct: isCorrect }] }));
+    setTotalAnswered(t => t + 1);
+    
+    if (isCorrect) {
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      const bonus = newStreak >= 3 ? 30 : 10;
+      setScore(s => s + bonus);
+      setMessage({ type: 'success', text: lang === 'es' ? `🎉 ¡Exacto! +${bonus} pts${newStreak >= 3 ? ' 🔥 ¡Racha!' : ''}` : `🎉 Correct! +${bonus} pts${newStreak >= 3 ? ' 🔥 Streak!' : ''}` });
+    } else {
+      setStreak(0);
+      const correctStage = TRAIN_STAGES.find(s => s.id === currentBact.stage);
+      const label = correctStage?.label[lang] || currentBact.stage;
+      setMessage({ type: 'error', text: lang === 'es' ? `❌ "${currentBact.name}" → ${label}` : `❌ "${currentBact.name}" → ${label}` });
+    }
+
+    setBgPulse(true);
+    setTrainAnim(true);
+    setTimeout(() => { setTrainAnim(false); setBgPulse(false); }, 600);
+    setSelectedWagon(null);
+    setCurrentBact(null);
+    setTimeout(() => setMessage(null), 2200);
+  };
+
+  const handleReset = () => {
+    setQueue(shuffle(ALL_BACTERIA).slice(0, 12));
+    setCurrentBact(null);
+    setWagons({ neonatal: [], infancia: [], adultez: [], vejez: [] });
+    setMessage(null);
+    setScore(0);
+    setStreak(0);
+    setGameOver(false);
+    setTotalAnswered(0);
+    setSelectedWagon(null);
+  };
+
+  const accuracy = totalAnswered > 0
+    ? Math.round((Object.values(wagons).flat().filter(b => b.correct).length / totalAnswered) * 100)
+    : 0;
+
+  const trainY = trainAnim ? -8 : 0;
+
+  return (
+    <div style={{
+      borderRadius: '30px',
+      overflow: 'hidden',
+      boxShadow: '0 30px 80px -10px rgba(0,0,0,0.18)',
+      background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      padding: isMobile ? '20px 16px' : '36px 40px',
+      position: 'relative',
+      transition: 'background 0.3s',
+    }}>
+      {/* Starfield background */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {[...Array(30)].map((_, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            width: Math.random() * 2 + 1 + 'px',
+            height: Math.random() * 2 + 1 + 'px',
+            background: 'white',
+            borderRadius: '50%',
+            top: Math.random() * 100 + '%',
+            left: Math.random() * 100 + '%',
+            opacity: Math.random() * 0.5 + 0.1,
+          }} />
+        ))}
+      </div>
+
+      {/* Header */}
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '12px', marginBottom: '24px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2rem' }}>🚂</span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '1.1rem' : '1.4rem', fontWeight: '900', color: 'white', letterSpacing: '-0.5px' }}>
+                {lang === 'es' ? 'Tren de la Microbiota' : 'Microbiota Express'}
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600' }}>
+                {lang === 'es' ? '🦠 Asigna cada bacteria a su vagón correcto' : '🦠 Assign each bacterium to its correct wagon'}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '8px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#fbbf24' }}>{score}</div>
+            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: '700' }}>{lang === 'es' ? 'PUNTOS' : 'SCORE'}</div>
+          </div>
+          {streak >= 2 && (
+            <div style={{ background: 'linear-gradient(135deg, #ef4444, #f97316)', borderRadius: '12px', padding: '8px 14px', textAlign: 'center', animation: 'none' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'white' }}>🔥 ×{streak}</div>
+              <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.8)', fontWeight: '700' }}>RACHA</div>
+            </div>
+          )}
+          <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '8px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#34d399' }}>{totalAnswered > 0 ? accuracy + '%' : '—'}</div>
+            <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: '700' }}>{lang === 'es' ? 'ACIERTOS' : 'ACCURACY'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Train track visual */}
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '20px' }}>
+        {/* Track rails */}
+        <div style={{ position: 'relative', height: isMobile ? '130px' : '160px', marginBottom: '8px' }}>
+          {/* Rail lines */}
+          <div style={{ position: 'absolute', bottom: '18px', left: 0, right: 0, height: '4px', background: 'rgba(255,255,255,0.12)', borderRadius: '2px' }} />
+          <div style={{ position: 'absolute', bottom: '12px', left: 0, right: 0, height: '4px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px' }} />
+          {/* Sleepers */}
+          {[...Array(isMobile ? 8 : 14)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute', bottom: '8px',
+              left: `${(i / (isMobile ? 8 : 14)) * 100}%`,
+              width: isMobile ? '5%' : '3.5%', height: '14px',
+              background: 'rgba(120,80,40,0.5)', borderRadius: '2px',
+            }} />
+          ))}
+
+          {/* LOCOMOTIVE */}
+          <div style={{
+            position: 'absolute', bottom: '22px', left: '8px',
+            transform: `translateY(${trainY}px)`,
+            transition: 'transform 0.3s cubic-bezier(.36,.07,.19,.97)',
+            fontSize: isMobile ? '2.8rem' : '3.4rem',
+            filter: 'drop-shadow(0 4px 16px rgba(251,191,36,0.5))',
+            zIndex: 5,
+          }}>🚂</div>
+
+          {/* WAGONS */}
+          <div style={{
+            position: 'absolute', bottom: '22px',
+            left: isMobile ? '70px' : '90px',
+            right: 0,
+            display: 'flex',
+            gap: isMobile ? '6px' : '10px',
+            transform: `translateY(${trainY}px)`,
+            transition: 'transform 0.3s cubic-bezier(.36,.07,.19,.97)',
+          }}>
+            {TRAIN_STAGES.map((stage, idx) => {
+              const wagonBacts = wagons[stage.id] || [];
+              const isSelected = selectedWagon === stage.id;
+              return (
+                <div
+                  key={stage.id}
+                  onClick={() => {
+                    if (!currentBact) return;
+                    setSelectedWagon(stage.id);
+                    setTimeout(() => handleDrop(stage.id), 100);
+                  }}
+                  style={{
+                    flex: 1,
+                    background: isSelected
+                      ? `linear-gradient(135deg, ${stage.color}55, ${stage.color}33)`
+                      : 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
+                    border: `2px solid ${isSelected ? stage.color : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '10px',
+                    padding: '6px 4px',
+                    cursor: currentBact ? 'pointer' : 'default',
+                    transition: 'all 0.2s',
+                    minHeight: isMobile ? '80px' : '100px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: '3px',
+                    boxShadow: isSelected ? `0 0 20px ${stage.color}44` : 'none',
+                    transform: isSelected ? 'scale(1.06)' : 'scale(1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Wagon label */}
+                  <div style={{ fontSize: isMobile ? '1.1rem' : '1.3rem' }}>{stage.emoji}</div>
+                  <div style={{ fontSize: '0.6rem', fontWeight: '800', color: stage.color, textAlign: 'center', lineHeight: 1.1 }}>{stage.label[lang]}</div>
+                  {/* Bacteria dots */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', justifyContent: 'center', marginTop: '2px' }}>
+                    {wagonBacts.slice(-6).map((b, bi) => (
+                      <div key={bi} title={b.name} style={{
+                        width: '10px', height: '10px', borderRadius: '50%',
+                        background: b.correct ? stage.color : '#ef4444',
+                        opacity: 0.9,
+                        boxShadow: `0 0 4px ${b.correct ? stage.color : '#ef4444'}`,
+                      }} />
+                    ))}
+                  </div>
+                  {/* Wagon wheels */}
+                  <div style={{ position: 'absolute', bottom: '-5px', left: '15%', width: '10px', height: '10px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.3)' }} />
+                  <div style={{ position: 'absolute', bottom: '-5px', right: '15%', width: '10px', height: '10px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.3)' }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Current bacteria card + message */}
+      <div style={{ position: 'relative', zIndex: 2, marginBottom: '16px' }}>
+        {message && (
+          <div style={{
+            textAlign: 'center', padding: '10px 20px', borderRadius: '14px', marginBottom: '12px',
+            background: message.type === 'success' ? 'rgba(52,211,153,0.18)' : 'rgba(239,68,68,0.18)',
+            border: `1px solid ${message.type === 'success' ? '#34d399' : '#ef4444'}`,
+            color: message.type === 'success' ? '#6ee7b7' : '#fca5a5',
+            fontWeight: '800', fontSize: '0.9rem',
+            animation: 'fadeIn 0.3s ease',
+          }}>
+            {message.text}
+          </div>
+        )}
+
+        {!gameOver ? (
+          currentBact ? (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+              border: `2px solid rgba(255,255,255,0.15)`,
+              borderRadius: '20px',
+              padding: isMobile ? '16px' : '20px 28px',
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: 'center',
+              gap: '16px',
+            }}>
+              <div style={{ textAlign: 'center', flex: '0 0 auto' }}>
+                <div style={{
+                  width: '60px', height: '60px', borderRadius: '50%',
+                  background: currentBact.type === 'good'
+                    ? `radial-gradient(circle, ${TRAIN_STAGES.find(s=>s.id===currentBact.stage)?.color || '#60a5fa'}, #1e293b)`
+                    : 'radial-gradient(circle, #ef4444, #1e293b)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.8rem',
+                  boxShadow: `0 0 24px ${currentBact.type === 'good' ? (TRAIN_STAGES.find(s=>s.id===currentBact.stage)?.glow || '#60a5fa') : '#ef4444'}66`,
+                  margin: '0 auto',
+                }}>🦠</div>
+                <div style={{ fontSize: '0.6rem', fontWeight: '700', color: currentBact.type === 'good' ? '#34d399' : '#ef4444', marginTop: '4px' }}>
+                  {currentBact.type === 'good' ? (lang === 'es' ? '✅ BENÉFICA' : '✅ BENEFICIAL') : (lang === 'es' ? '⚠️ PATÓGENA' : '⚠️ PATHOGEN')}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: '900', color: 'white', marginBottom: '4px', fontStyle: 'italic' }}>
+                  {currentBact.name}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '10px' }}>
+                  {lang === 'es' ? '¿En qué vagón viaja esta bacteria? Toca el vagón correcto ↑' : 'Which wagon does this bacterium ride? Tap the correct wagon ↑'}
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {TRAIN_STAGES.map(stage => (
+                    <button
+                      key={stage.id}
+                      onClick={() => handleDrop(stage.id)}
+                      style={{
+                        padding: '6px 14px', borderRadius: '10px', border: `1.5px solid ${stage.color}55`,
+                        background: `${stage.color}18`, color: stage.color,
+                        fontWeight: '800', fontSize: '0.72rem', cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {stage.emoji} {stage.label[lang]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', flex: '0 0 auto' }}>
+                <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: '700' }}>
+                  {lang === 'es' ? 'QUEDAN' : 'LEFT'}
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#e2e8f0' }}>
+                  {queue.length + 1}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px', fontStyle: 'italic' }}>
+              {lang === 'es' ? 'Cargando bacteria...' : 'Loading bacterium...'}
+            </div>
+          )
+        ) : (
+          /* GAME OVER SCREEN */
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(139,92,246,0.12))',
+            border: '2px solid rgba(251,191,36,0.3)',
+            borderRadius: '20px',
+            padding: '28px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🏆</div>
+            <h3 style={{ color: '#fbbf24', margin: '0 0 6px 0', fontSize: '1.5rem', fontWeight: '900' }}>
+              {lang === 'es' ? '¡Tren completado!' : 'Train Complete!'}
+            </h3>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', margin: '16px 0' }}>
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#fbbf24' }}>{score}</div>
+                <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{lang === 'es' ? 'PUNTOS' : 'SCORE'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#34d399' }}>{accuracy}%</div>
+                <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{lang === 'es' ? 'PRECISIÓN' : 'ACCURACY'}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#cbd5e1', margin: '12px 0', lineHeight: 1.5 }}>
+              {accuracy >= 80
+                ? (lang === 'es' ? '🌟 ¡Excelente! Dominas la taxonomía de la microbiota.' : '🌟 Excellent! You master microbiota taxonomy.')
+                : accuracy >= 50
+                ? (lang === 'es' ? '👍 Buen trabajo. Repasa las etapas con más errores.' : '👍 Good job. Review the stages with most errors.')
+                : (lang === 'es' ? '📚 Sigue estudiando. La microbiota tiene muchos secretos.' : '📚 Keep studying. Microbiota has many secrets.')}
+            </div>
+            <button onClick={handleReset} style={{
+              marginTop: '8px', padding: '12px 28px', borderRadius: '14px',
+              background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+              border: 'none', color: 'white', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(251,191,36,0.4)',
+            }}>
+              🚂 {lang === 'es' ? 'Nuevo Viaje' : 'New Journey'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Stage facts ticker */}
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {TRAIN_STAGES.map((stage) => (
+          <div key={stage.id} style={{
+            flex: '0 0 auto',
+            background: `${stage.color}12`,
+            border: `1px solid ${stage.color}33`,
+            borderRadius: '12px',
+            padding: '8px 12px',
+            minWidth: isMobile ? '180px' : '220px',
+          }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: '800', color: stage.color, marginBottom: '3px' }}>
+              {stage.emoji} {stage.label[lang]}
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.3 }}>
+              {stage.fact[lang]}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    </div>
+  );
+}
+
+// ============================================================
+// 🗺️ 1. MAPA DEL INTESTINO INTERACTIVO
+// ============================================================
+const GUT_SECTIONS = [
+  { id: 'esofago', label: { es: 'Esófago', en: 'Esophagus' }, x: 50, y: 4, r: 5, color: '#f87171', bacteria: { es: 'Streptococcus salivarius', en: 'Streptococcus salivarius' }, info: { es: 'Microbiota escasa. El peristaltismo impide colonización duradera. pH ~6.', en: 'Sparse microbiota. Peristalsis prevents lasting colonization. pH ~6.' } },
+  { id: 'estomago', label: { es: 'Estómago', en: 'Stomach' }, x: 45, y: 16, r: 8, color: '#fb923c', bacteria: { es: 'Helicobacter pylori', en: 'Helicobacter pylori' }, info: { es: 'Ambiente muy ácido (pH 1-3). Solo Helicobacter pylori puede sobrevivir. Afecta a ~50% de la población mundial.', en: 'Very acidic environment (pH 1-3). Only H. pylori can survive. Affects ~50% of the world population.' } },
+  { id: 'intestino_delgado', label: { es: 'Intestino Delgado', en: 'Small Intestine' }, x: 60, y: 38, r: 7, color: '#facc15', bacteria: { es: 'Lactobacillus, Enterococcus', en: 'Lactobacillus, Enterococcus' }, info: { es: 'pH 6-7. Absorción de nutrientes. Bilis limita bacterias en duodeno. Densidad: 10³–10⁷ UFC/mL.', en: 'pH 6-7. Nutrient absorption. Bile limits bacteria in duodenum. Density: 10³–10⁷ CFU/mL.' } },
+  { id: 'colon', label: { es: 'Colon', en: 'Colon' }, x: 38, y: 62, r: 10, color: '#4ade80', bacteria: { es: 'Bacteroides, Bifidobacterium, Faecalibacterium', en: 'Bacteroides, Bifidobacterium, Faecalibacterium' }, info: { es: 'El ecosistema más denso: 10¹¹–10¹² UFC/mL. Fermentación anaeróbica produce AGCC (Butirato, Propionato, Acetato). 70% del sistema inmune reside aquí.', en: 'The densest ecosystem: 10¹¹–10¹² CFU/mL. Anaerobic fermentation produces SCFAs (Butyrate, Propionate, Acetate). 70% of the immune system resides here.' } },
+  { id: 'recto', label: { es: 'Recto', en: 'Rectum' }, x: 55, y: 80, r: 5, color: '#818cf8', bacteria: { es: 'Bacteroides fragilis', en: 'Bacteroides fragilis' }, info: { es: 'Reservorio final. Alta concentración de metanógenos. Importante para diagnóstico por análisis de heces.', en: 'Final reservoir. High methanogen concentration. Important for stool-based diagnosis.' } },
+];
+
+function InteractiveGutMap({ lang, isMobile }) {
+  const [selected, setSelected] = useState(null);
+  const [hovered, setHovered] = useState(null);
+
+  const active = selected || hovered;
+  const activeSec = GUT_SECTIONS.find(s => s.id === active);
+
+  return (
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #bbf7d0', padding: isMobile ? '20px' : '32px', boxShadow: '0 20px 60px -10px rgba(16,185,129,0.15)' }}>
+      <h3 style={{ margin: '0 0 6px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: '#064e3b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        🗺️ {lang === 'es' ? 'Mapa del Intestino Interactivo' : 'Interactive Gut Map'}
+      </h3>
+      <p style={{ margin: '0 0 20px 0', fontSize: '0.75rem', color: '#065f46', fontWeight: '600' }}>
+        {lang === 'es' ? 'Toca cada zona para explorar su microbiota' : 'Tap each zone to explore its microbiota'}
+      </p>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: 'flex-start' }}>
+        {/* SVG gut diagram */}
+        <div style={{ flex: '0 0 auto', width: isMobile ? '100%' : '260px', position: 'relative' }}>
+          <svg viewBox="0 0 100 100" style={{ width: '100%', height: isMobile ? '280px' : '360px' }}>
+            {/* Gut silhouette path */}
+            <path d="M50,2 Q60,8 58,20 Q56,30 65,40 Q72,50 65,62 Q58,72 55,80 Q52,88 50,95" stroke="#d1fae5" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            <path d="M50,2 Q40,8 42,20 Q44,30 35,42 Q28,54 35,65 Q42,74 45,80 Q48,88 50,95" stroke="#d1fae5" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            {/* Connector curves for colon */}
+            <path d="M35,65 Q20,70 25,80 Q30,88 45,80" stroke="#d1fae5" strokeWidth="10" fill="none" strokeLinecap="round"/>
+            {/* Interactive zones */}
+            {GUT_SECTIONS.map(sec => (
+              <g key={sec.id} onClick={() => setSelected(selected === sec.id ? null : sec.id)} onMouseEnter={() => setHovered(sec.id)} onMouseLeave={() => setHovered(null)} style={{ cursor: 'pointer' }}>
+                <circle cx={sec.x} cy={sec.y} r={sec.r + (active === sec.id ? 3 : 0)} fill={sec.color} opacity={active === sec.id ? 1 : 0.75} style={{ transition: 'all 0.2s', filter: active === sec.id ? `drop-shadow(0 0 8px ${sec.color})` : 'none' }} />
+                <text x={sec.x} y={sec.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={sec.r * 0.7} fontWeight="900" fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  {active === sec.id ? '★' : '●'}
+                </text>
+                <text x={sec.x < 50 ? sec.x - sec.r - 2 : sec.x + sec.r + 2} y={sec.y} textAnchor={sec.x < 50 ? 'end' : 'start'} dominantBaseline="middle" fontSize="3.5" fontWeight="700" fill="#064e3b" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                  {sec.label[lang]}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+        {/* Info panel */}
+        <div style={{ flex: 1 }}>
+          {activeSec ? (
+            <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: `2px solid ${activeSec.color}`, boxShadow: `0 8px 30px ${activeSec.color}33`, animation: 'fadeIn 0.25s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: activeSec.color, boxShadow: `0 0 10px ${activeSec.color}` }} />
+                <span style={{ fontWeight: '900', fontSize: '1.1rem', color: '#0f172a' }}>{activeSec.label[lang]}</span>
+              </div>
+              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#64748b', marginBottom: '4px' }}>🦠 {lang === 'es' ? 'BACTERIAS DOMINANTES' : 'DOMINANT BACTERIA'}</div>
+                <div style={{ fontStyle: 'italic', fontWeight: '700', color: '#1e293b', fontSize: '0.88rem' }}>{activeSec.bacteria[lang]}</div>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.6' }}>{activeSec.info[lang]}</p>
+            </div>
+          ) : (
+            <div style={{ background: 'white', borderRadius: '20px', padding: '24px', textAlign: 'center', border: '2px dashed #a7f3d0' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>👆</div>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem', fontWeight: '600' }}>
+                {lang === 'es' ? 'Selecciona una zona del intestino para ver su microbiota, pH y función clínica.' : 'Select a gut zone to see its microbiota, pH and clinical function.'}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '16px', justifyContent: 'center' }}>
+                {GUT_SECTIONS.map(s => (
+                  <button key={s.id} onClick={() => setSelected(s.id)} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', background: s.color + '22', color: s.color, fontWeight: '800', fontSize: '0.7rem', cursor: 'pointer' }}>
+                    {s.label[lang]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 📊 2. GRÁFICA DE DIVERSIDAD BACTERIANA POR ETAPA
+// ============================================================
+const DIVERSITY_DATA = [
+  { stage: { es: 'Neonatal', en: 'Neonatal' }, emoji: '👶', alpha: 12, richness: 20, firmicutes: 35, bacteroidetes: 15, actinobacteria: 40, proteobacteria: 10, color: '#38bdf8' },
+  { stage: { es: 'Infancia', en: 'Childhood' }, emoji: '🧒', alpha: 55, richness: 65, firmicutes: 45, bacteroidetes: 35, actinobacteria: 12, proteobacteria: 8, color: '#4ade80' },
+  { stage: { es: 'Adultez', en: 'Adulthood' }, emoji: '🧑', alpha: 90, richness: 95, firmicutes: 50, bacteroidetes: 40, actinobacteria: 5, proteobacteria: 5, color: '#fb923c' },
+  { stage: { es: 'Adulto Mayor', en: 'Older Adult' }, emoji: '👴', alpha: 48, richness: 42, firmicutes: 30, bacteroidetes: 28, actinobacteria: 8, proteobacteria: 34, color: '#c084fc' },
+];
+
+function DiversityChart({ lang, isMobile }) {
+  const [metric, setMetric] = useState('alpha');
+  const [hoveredBar, setHoveredBar] = useState(null);
+
+  const metrics = [
+    { key: 'alpha', label: { es: 'Diversidad Alfa', en: 'Alpha Diversity' }, desc: { es: 'Índice de Shannon — riqueza de especies por muestra', en: 'Shannon Index — species richness per sample' }, unit: 'índice' },
+    { key: 'richness', label: { es: 'Riqueza de OTUs', en: 'OTU Richness' }, desc: { es: 'Número relativo de Unidades Taxonómicas Operacionales', en: 'Relative number of Operational Taxonomic Units' }, unit: '%' },
+    { key: 'firmicutes', label: { es: 'Firmicutes', en: 'Firmicutes' }, desc: { es: 'Filo que incluye Lactobacillus, Clostridium, Faecalibacterium', en: 'Phylum including Lactobacillus, Clostridium, Faecalibacterium' }, unit: '%' },
+    { key: 'bacteroidetes', label: { es: 'Bacteroidetes', en: 'Bacteroidetes' }, desc: { es: 'Filo clave en degradación de polisacáridos complejos', en: 'Key phylum in complex polysaccharide degradation' }, unit: '%' },
+    { key: 'proteobacteria', label: { es: 'Proteobacteria', en: 'Proteobacteria' }, desc: { es: 'Marcador de inflamación — alto en disbiosis', en: 'Inflammation marker — high in dysbiosis' }, unit: '%' },
+  ];
+
+  const current = metrics.find(m => m.key === metric);
+  const maxVal = Math.max(...DIVERSITY_DATA.map(d => d[metric]));
+
+  return (
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: isMobile ? '20px' : '32px', boxShadow: '0 20px 60px -10px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        📊 {lang === 'es' ? 'Diversidad Bacteriana por Etapa' : 'Bacterial Diversity by Life Stage'}
+      </h3>
+      <p style={{ margin: '0 0 18px 0', fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600' }}>{current.desc[lang]}</p>
+
+      {/* Metric selector */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '24px' }}>
+        {metrics.map(m => (
+          <button key={m.key} onClick={() => setMetric(m.key)} style={{
+            padding: '6px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: '800',
+            background: metric === m.key ? 'white' : 'rgba(255,255,255,0.07)',
+            color: metric === m.key ? '#0f172a' : '#94a3b8',
+            transition: 'all 0.2s',
+          }}>{m.label[lang]}</button>
+        ))}
+      </div>
+
+      {/* Bar chart */}
+      <div style={{ display: 'flex', gap: isMobile ? '10px' : '16px', alignItems: 'flex-end', height: '160px', marginBottom: '16px' }}>
+        {DIVERSITY_DATA.map((d, i) => {
+          const pct = (d[metric] / maxVal) * 100;
+          const isHovered = hoveredBar === i;
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '6px', cursor: 'pointer' }}
+              onMouseEnter={() => setHoveredBar(i)} onMouseLeave={() => setHoveredBar(null)} onClick={() => setHoveredBar(isHovered ? null : i)}>
+              {isHovered && (
+                <div style={{ fontSize: '0.65rem', fontWeight: '900', color: d.color, whiteSpace: 'nowrap' }}>{d[metric]}{current.unit === 'índice' ? '' : '%'}</div>
+              )}
+              <div style={{
+                width: '100%', borderRadius: '8px 8px 4px 4px',
+                height: `${pct}%`,
+                background: `linear-gradient(180deg, ${d.color}, ${d.color}88)`,
+                boxShadow: isHovered ? `0 0 20px ${d.color}88` : 'none',
+                transform: isHovered ? 'scaleX(1.08)' : 'scaleX(1)',
+                transition: 'all 0.25s',
+                minHeight: '8px',
+                position: 'relative',
+              }}>
+                {metric === 'proteobacteria' && d[metric] > 20 && (
+                  <div style={{ position: 'absolute', top: '-18px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.7rem' }}>⚠️</div>
+                )}
+              </div>
+              <div style={{ fontSize: isMobile ? '1rem' : '1.2rem' }}>{d.emoji}</div>
+              <div style={{ fontSize: '0.55rem', color: '#64748b', fontWeight: '700', textAlign: 'center', lineHeight: 1.2 }}>{d.stage[lang]}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend bar */}
+      <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '10px 14px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600' }}>
+          💡 {lang === 'es' ? 'La diversidad alfa máxima ocurre en la adultez joven (índice ~90). La Proteobacteria elevada es un biomarcador de Inflammaging en el adulto mayor.' : 'Peak alpha diversity occurs in young adulthood (index ~90). Elevated Proteobacteria is a biomarker of Inflammaging in older adults.'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 🎴 3. FLASHCARDS DE BACTERIAS
+// ============================================================
+const FLASHCARDS = [
+  { front: { es: 'Akkermansia muciniphila', en: 'Akkermansia muciniphila' }, back: { es: 'Degrada mucina del intestino grueso. Alta concentración se correlaciona con menor obesidad y mejor control glucémico. "La guardiana de la barrera intestinal."', en: 'Degrades colon mucin. High levels correlate with less obesity and better glycemic control. "The intestinal barrier guardian."' }, type: 'good', emoji: '🛡️', phylum: 'Verrucomicrobia' },
+  { front: { es: 'Faecalibacterium prausnitzii', en: 'Faecalibacterium prausnitzii' }, back: { es: 'Mayor productora de Butirato en el colon. Tiene efecto antiinflamatorio directo. Su ausencia es marcador de Enfermedad de Crohn activa.', en: 'Top butyrate producer in the colon. Has direct anti-inflammatory effect. Its absence is a marker of active Crohn\'s Disease.' }, type: 'good', emoji: '🔥', phylum: 'Firmicutes' },
+  { front: { es: 'Bifidobacterium longum', en: 'Bifidobacterium longum' }, back: { es: 'Dominante en lactantes. Produce ácido acético y láctico. Hidroliza los HMO de la leche materna. Clave en la programación del sistema inmune neonatal.', en: 'Dominant in infants. Produces acetic and lactic acid. Hydrolyzes breast milk HMOs. Key in neonatal immune system programming.' }, type: 'good', emoji: '👶', phylum: 'Actinobacteria' },
+  { front: { es: 'Clostridioides difficile', en: 'Clostridioides difficile' }, back: { es: 'Patógeno oportunista. Causa diarrea grave post-antibióticos. Produce toxinas A y B que destruyen el epitelio intestinal. Tratamiento: Trasplante de Microbiota Fecal (TMF).', en: 'Opportunistic pathogen. Causes severe post-antibiotic diarrhea. Produces toxins A and B that destroy intestinal epithelium. Treatment: Fecal Microbiota Transplant (FMT).' }, type: 'bad', emoji: '☠️', phylum: 'Firmicutes' },
+  { front: { es: 'Lactobacillus rhamnosus', en: 'Lactobacillus rhamnosus' }, back: { es: 'Probiótico más estudiado del mundo (GG). Reduce la duración de la diarrea infecciosa. Activa células Treg. Produce GABA (efecto ansiolítico).', en: 'World\'s most studied probiotic (GG strain). Reduces infectious diarrhea duration. Activates Treg cells. Produces GABA (anxiolytic effect).' }, type: 'good', emoji: '🌟', phylum: 'Firmicutes' },
+  { front: { es: 'Helicobacter pylori', en: 'Helicobacter pylori' }, back: { es: 'Único habitante del estómago (pH 1-3). Coloniza el 50% de la humanidad. Causa úlceras y adenocarcinoma gástrico. Su erradicación puede alterar el resto del microbioma.', en: 'Sole stomach inhabitant (pH 1-3). Colonizes 50% of humanity. Causes ulcers and gastric adenocarcinoma. Its eradication can alter the rest of the microbiome.' }, type: 'bad', emoji: '🔴', phylum: 'Proteobacteria' },
+  { front: { es: 'Roseburia intestinalis', en: 'Roseburia intestinalis' }, back: { es: 'Segunda mayor productora de Butirato. Degrada almidón resistente. Reducida en pacientes con diabetes tipo 2 y enfermedad inflamatoria intestinal.', en: 'Second-largest butyrate producer. Degrades resistant starch. Reduced in type 2 diabetes and inflammatory bowel disease patients.' }, type: 'good', emoji: '🌿', phylum: 'Firmicutes' },
+  { front: { es: 'Bacteroides fragilis', en: 'Bacteroides fragilis' }, back: { es: 'Bacteria comensal clave en la tolerancia inmune. La cepa enterotoxigénica (ETBF) produce fragilisina, una metaloproteasa que rompe la barrera epitelial y se asocia a cáncer de colon.', en: 'Key commensal in immune tolerance. The enterotoxigenic strain (ETBF) produces fragilysin, a metalloprotease that breaks the epithelial barrier and is associated with colon cancer.' }, type: 'neutral', emoji: '⚖️', phylum: 'Bacteroidetes' },
+];
+
+function FlashcardDeck({ lang, isMobile }) {
+  const [cardIdx, setCardIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [known, setKnown] = useState([]);
+  const [review, setReview] = useState([]);
+
+  const card = FLASHCARDS[cardIdx];
+  const progress = ((known.length + review.length) / FLASHCARDS.length) * 100;
+
+  const nextCard = () => { setFlipped(false); setTimeout(() => setCardIdx(i => (i + 1) % FLASHCARDS.length), 180); };
+  const prevCard = () => { setFlipped(false); setTimeout(() => setCardIdx(i => (i - 1 + FLASHCARDS.length) % FLASHCARDS.length), 180); };
+  const markKnown = () => { setKnown(k => [...k, cardIdx]); nextCard(); };
+  const markReview = () => { setReview(r => [...r, cardIdx]); nextCard(); };
+
+  const typeColor = card.type === 'good' ? '#4ade80' : card.type === 'bad' ? '#f87171' : '#fbbf24';
+  const typeLabel = card.type === 'good' ? (lang === 'es' ? 'BENÉFICA' : 'BENEFICIAL') : card.type === 'bad' ? (lang === 'es' ? 'PATÓGENA' : 'PATHOGEN') : (lang === 'es' ? 'DUAL' : 'DUAL');
+
+  return (
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #fdf4ff, #fae8ff)', border: '1px solid #e9d5ff', padding: isMobile ? '20px' : '32px', boxShadow: '0 20px 60px -10px rgba(139,92,246,0.15)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ margin: 0, fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          🎴 {lang === 'es' ? 'Flashcards de Bacterias' : 'Bacteria Flashcards'}
+        </h3>
+        <div style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '700' }}>{cardIdx + 1}/{FLASHCARDS.length}</div>
+      </div>
+
+      {/* Progress */}
+      <div style={{ background: '#e9d5ff', borderRadius: '10px', height: '6px', marginBottom: '16px', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #8b5cf6, #a855f7)', borderRadius: '10px', transition: 'width 0.4s' }} />
+      </div>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', fontSize: '0.7rem', fontWeight: '700' }}>
+        <span style={{ color: '#16a34a' }}>✅ {known.length} {lang === 'es' ? 'dominadas' : 'mastered'}</span>
+        <span style={{ color: '#ca8a04' }}>🔄 {review.length} {lang === 'es' ? 'revisar' : 'review'}</span>
+      </div>
+
+      {/* Card */}
+      <div onClick={() => setFlipped(f => !f)} style={{ cursor: 'pointer', perspective: '1000px', marginBottom: '16px', height: isMobile ? '200px' : '220px', position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 0, transition: 'transform 0.5s', transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+          {/* Front */}
+          <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: 'white', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', border: `2px solid ${typeColor}44`, boxShadow: `0 8px 30px ${typeColor}22` }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>{card.emoji}</div>
+            <div style={{ fontStyle: 'italic', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.25rem', color: '#1e293b', textAlign: 'center', marginBottom: '8px' }}>{card.front[lang]}</div>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700', marginBottom: '10px' }}>Phylum: {card.phylum}</div>
+            <div style={{ padding: '4px 12px', borderRadius: '20px', background: typeColor + '22', color: typeColor, fontWeight: '800', fontSize: '0.65rem' }}>{typeLabel}</div>
+            <div style={{ marginTop: '16px', fontSize: '0.7rem', color: '#94a3b8' }}>👆 {lang === 'es' ? 'Toca para revelar' : 'Tap to reveal'}</div>
+          </div>
+          {/* Back */}
+          <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', background: `linear-gradient(135deg, ${typeColor}18, ${typeColor}08)`, borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px', border: `2px solid ${typeColor}66` }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: '800', color: typeColor, marginBottom: '10px' }}>🦠 {lang === 'es' ? 'FICHA CLÍNICA' : 'CLINICAL PROFILE'}</div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', lineHeight: '1.6' }}>{card.back[lang]}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <button onClick={prevCard} style={{ padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #e9d5ff', background: 'white', cursor: 'pointer', fontWeight: '800', color: '#6b7280' }}>←</button>
+        <button onClick={markReview} style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: '#fef3c7', color: '#b45309', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>🔄 {lang === 'es' ? 'Revisar' : 'Review'}</button>
+        <button onClick={markKnown} style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: '#dcfce7', color: '#15803d', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>✅ {lang === 'es' ? 'Dominada' : 'Mastered'}</button>
+        <button onClick={nextCard} style={{ padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #e9d5ff', background: 'white', cursor: 'pointer', fontWeight: '800', color: '#6b7280' }}>→</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 🧬 4. SIMULADOR DEL EJE INTESTINO-CEREBRO
+// ============================================================
+const GUT_BRAIN_FACTORS = [
+  { id: 'fibra', label: { es: 'Fibra Prebiótica', en: 'Prebiotic Fiber' }, icon: '🌾', effect: { serotonin: +20, cortisol: -10, butyrate: +25, inflammation: -15 }, desc: { es: 'Los MACs alimentan bacterias que producen AGCC y modulan el nervio vago.', en: 'MACs feed bacteria that produce SCFAs and modulate the vagus nerve.' } },
+  { id: 'probiotico', label: { es: 'Probióticos', en: 'Probiotics' }, icon: '🥛', effect: { serotonin: +15, cortisol: -8, butyrate: +10, inflammation: -12 }, desc: { es: 'Lactobacillus produce GABA; Bifidobacterium reduce IL-6 y TNF-α.', en: 'Lactobacillus produces GABA; Bifidobacterium reduces IL-6 and TNF-α.' } },
+  { id: 'estres', label: { es: 'Estrés Crónico', en: 'Chronic Stress' }, icon: '😰', effect: { serotonin: -20, cortisol: +30, butyrate: -15, inflammation: +25 }, desc: { es: 'El cortisol aumenta la permeabilidad intestinal y altera la composición bacteriana.', en: 'Cortisol increases intestinal permeability and alters bacterial composition.' } },
+  { id: 'antibiotico', label: { es: 'Antibióticos', en: 'Antibiotics' }, icon: '💊', effect: { serotonin: -15, cortisol: +10, butyrate: -30, inflammation: +20 }, desc: { es: 'Destruyen bacterias productoras de serotonina y butirato. Recuperación: 6-12 meses.', en: 'Destroy serotonin and butyrate-producing bacteria. Recovery: 6-12 months.' } },
+  { id: 'ejercicio', label: { es: 'Ejercicio', en: 'Exercise' }, icon: '🏃', effect: { serotonin: +18, cortisol: -5, butyrate: +12, inflammation: -18 }, desc: { es: 'Aumenta Akkermansia y Lachnospiraceae. Activa el eje HPA de forma positiva.', en: 'Increases Akkermansia and Lachnospiraceae. Positively activates the HPA axis.' } },
+  { id: 'ultraproc', label: { es: 'Ultraprocesados', en: 'Ultra-processed' }, icon: '🍟', effect: { serotonin: -12, cortisol: +15, butyrate: -20, inflammation: +30 }, desc: { es: 'Los emulsionantes (CMC, P80) destruyen la capa de moco del intestino.', en: 'Emulsifiers (CMC, P80) destroy the intestinal mucus layer.' } },
+];
+
+const BIOMARKERS = [
+  { key: 'serotonin', label: { es: 'Serotonina', en: 'Serotonin' }, icon: '😊', color: '#fbbf24', goodDir: 'up', base: 50 },
+  { key: 'cortisol', label: { es: 'Cortisol', en: 'Cortisol' }, icon: '😰', color: '#f87171', goodDir: 'down', base: 30 },
+  { key: 'butyrate', label: { es: 'Butirato', en: 'Butyrate' }, icon: '🛡️', color: '#4ade80', goodDir: 'up', base: 40 },
+  { key: 'inflammation', label: { es: 'Inflamación', en: 'Inflammation' }, icon: '🔥', color: '#f97316', goodDir: 'down', base: 20 },
+];
+
+function GutBrainSimulator({ lang, isMobile }) {
+  const [active, setActive] = useState([]);
+  const [values, setValues] = useState({ serotonin: 50, cortisol: 30, butyrate: 40, inflammation: 20 });
+  const [lastFactor, setLastFactor] = useState(null);
+
+  const toggleFactor = (factor) => {
+    const isActive = active.includes(factor.id);
+    const newActive = isActive ? active.filter(id => id !== factor.id) : [...active, factor.id];
+    setActive(newActive);
+    setLastFactor(factor);
+
+    const newVals = { serotonin: 50, cortisol: 30, butyrate: 40, inflammation: 20 };
+    newActive.forEach(id => {
+      const f = GUT_BRAIN_FACTORS.find(x => x.id === id);
+      if (f) {
+        Object.keys(newVals).forEach(k => {
+          newVals[k] = Math.max(0, Math.min(100, newVals[k] + (f.effect[k] || 0)));
+        });
+      }
+    });
+    setValues(newVals);
+  };
+
+  const overallHealth = Math.round((values.serotonin + values.butyrate + (100 - values.cortisol) + (100 - values.inflammation)) / 4);
+  const healthColor = overallHealth >= 65 ? '#4ade80' : overallHealth >= 40 ? '#fbbf24' : '#f87171';
+  const healthLabel = overallHealth >= 65 ? (lang === 'es' ? 'Eubiosis' : 'Eubiosis') : overallHealth >= 40 ? (lang === 'es' ? 'En Riesgo' : 'At Risk') : (lang === 'es' ? 'Disbiosis' : 'Dysbiosis');
+
+  return (
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #0f172a, #1e1b4b)', padding: isMobile ? '20px' : '32px', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 20px 60px -10px rgba(99,102,241,0.2)' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        🧬 {lang === 'es' ? 'Simulador Eje Intestino-Cerebro' : 'Gut-Brain Axis Simulator'}
+      </h3>
+      <p style={{ margin: '0 0 20px 0', fontSize: '0.72rem', color: '#94a3b8' }}>
+        {lang === 'es' ? 'Activa/desactiva factores y observa cómo cambian los biomarcadores en tiempo real' : 'Toggle factors and watch biomarkers change in real time'}
+      </p>
+
+      {/* Axis visual */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '20px', padding: '16px 20px', textAlign: 'center', minWidth: '90px' }}>
+          <div style={{ fontSize: '2rem' }}>🧠</div>
+          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>{lang === 'es' ? 'CEREBRO' : 'BRAIN'}</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <div style={{ fontSize: '0.55rem', color: '#818cf8', fontWeight: '800' }}>NERVIO VAGO ↕</div>
+          <div style={{ width: '60px', height: '3px', background: 'linear-gradient(90deg, #818cf8, #6366f1)', borderRadius: '2px', boxShadow: '0 0 8px #818cf8' }} />
+          <div style={{ fontSize: '0.55rem', color: '#818cf8', fontWeight: '800' }}>SEROTONINA ↕</div>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '20px', padding: '16px 20px', textAlign: 'center', minWidth: '90px' }}>
+          <div style={{ fontSize: '2rem' }}>🦠</div>
+          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>{lang === 'es' ? 'INTESTINO' : 'GUT'}</div>
+        </div>
+        <div style={{ background: `${healthColor}22`, borderRadius: '20px', padding: '12px 18px', textAlign: 'center', border: `1.5px solid ${healthColor}55`, minWidth: '90px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: '900', color: healthColor }}>{overallHealth}%</div>
+          <div style={{ fontSize: '0.6rem', color: healthColor, fontWeight: '800' }}>{healthLabel}</div>
+        </div>
+      </div>
+
+      {/* Biomarkers */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+        {BIOMARKERS.map(bm => {
+          const val = values[bm.key];
+          const isGood = (bm.goodDir === 'up' && val >= 50) || (bm.goodDir === 'down' && val <= 40);
+          return (
+            <div key={bm.key} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '12px', border: `1px solid ${bm.color}33` }}>
+              <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{bm.icon}</div>
+              <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: '800', marginBottom: '6px' }}>{bm.label[lang]}</div>
+              <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '6px', height: '8px', overflow: 'hidden', marginBottom: '4px' }}>
+                <div style={{ height: '100%', width: `${val}%`, background: bm.color, borderRadius: '6px', transition: 'width 0.5s ease', boxShadow: `0 0 8px ${bm.color}66` }} />
+              </div>
+              <div style={{ fontSize: '0.75rem', fontWeight: '900', color: isGood ? '#4ade80' : '#f87171' }}>{val}%</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Factor buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+        {GUT_BRAIN_FACTORS.map(factor => {
+          const isOn = active.includes(factor.id);
+          return (
+            <button key={factor.id} onClick={() => toggleFactor(factor)} style={{
+              padding: '10px 12px', borderRadius: '12px', border: isOn ? '1.5px solid rgba(255,255,255,0.3)' : '1.5px solid rgba(255,255,255,0.08)',
+              background: isOn ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.04)',
+              color: isOn ? 'white' : '#64748b',
+              cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.2s',
+              boxShadow: isOn ? '0 0 16px rgba(255,255,255,0.1)' : 'none',
+            }}>
+              <span>{factor.icon}</span>
+              <span style={{ textAlign: 'left', lineHeight: 1.2, fontSize: '0.68rem' }}>{factor.label[lang]}</span>
+              {isOn && <span style={{ marginLeft: 'auto', fontSize: '0.55rem', background: 'rgba(255,255,255,0.2)', padding: '2px 5px', borderRadius: '6px' }}>ON</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {lastFactor && (
+        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.72rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+          💡 <strong>{lastFactor.label[lang]}:</strong> {lastFactor.desc[lang]}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// ⏱️ 5. QUIZ CONTRARRELOJ CON RANKING
+// ============================================================
+const TIMED_QUESTIONS = [
+  { q: { es: '¿Qué bacteria produce el 90% de la serotonina corporal?', en: 'Which bacteria produces 90% of body serotonin?' }, opts: [{ t: { es: 'Bacteroides', en: 'Bacteroides' }, correct: false }, { t: { es: 'Enterochromaffin cells (vía microbiota)', en: 'Enterochromaffin cells (via microbiota)' }, correct: true }, { t: { es: 'Clostridium', en: 'Clostridium' }, correct: false }, { t: { es: 'Helicobacter', en: 'Helicobacter' }, correct: false }] },
+  { q: { es: '¿Qué significa "Inflammaging"?', en: 'What does "Inflammaging" mean?' }, opts: [{ t: { es: 'Inflamación aguda en niños', en: 'Acute inflammation in children' }, correct: false }, { t: { es: 'Inflamación crónica de bajo grado en el envejecimiento', en: 'Low-grade chronic inflammation in aging' }, correct: true }, { t: { es: 'Fiebre por infección', en: 'Fever from infection' }, correct: false }, { t: { es: 'Inflamación por antibióticos', en: 'Antibiotic-induced inflammation' }, correct: false }] },
+  { q: { es: '¿Cuánto pesa aproximadamente el microbioma adulto?', en: 'How much does the adult microbiome approximately weigh?' }, opts: [{ t: { es: '200 gramos', en: '200 grams' }, correct: false }, { t: { es: '500 gramos', en: '500 grams' }, correct: false }, { t: { es: '2 kilogramos', en: '2 kilograms' }, correct: true }, { t: { es: '10 kilogramos', en: '10 kilograms' }, correct: false }] },
+  { q: { es: '¿Qué son los HMO?', en: 'What are HMOs?' }, opts: [{ t: { es: 'Hormonas del metabolismo óseo', en: 'Bone metabolism hormones' }, correct: false }, { t: { es: 'Oligosacáridos de la leche materna', en: 'Human Milk Oligosaccharides' }, correct: true }, { t: { es: 'Medicamentos homeopáticos', en: 'Homeopathic medicines' }, correct: false }, { t: { es: 'Marcadores de hepatitis', en: 'Hepatitis markers' }, correct: false }] },
+  { q: { es: '¿Qué bacteria es dominante en el estómago?', en: 'Which bacterium dominates the stomach?' }, opts: [{ t: { es: 'Lactobacillus', en: 'Lactobacillus' }, correct: false }, { t: { es: 'Bifidobacterium', en: 'Bifidobacterium' }, correct: false }, { t: { es: 'Helicobacter pylori', en: 'Helicobacter pylori' }, correct: true }, { t: { es: 'Faecalibacterium', en: 'Faecalibacterium' }, correct: false }] },
+  { q: { es: '¿Qué son los AGCC (o SCFAs)?', en: 'What are SCFAs?' }, opts: [{ t: { es: 'Anticuerpos del colon', en: 'Colon antibodies' }, correct: false }, { t: { es: 'Ácidos grasos de cadena corta producidos por fermentación', en: 'Short-chain fatty acids produced by fermentation' }, correct: true }, { t: { es: 'Azúcares del intestino delgado', en: 'Small intestine sugars' }, correct: false }, { t: { es: 'Enzimas pancreáticas', en: 'Pancreatic enzymes' }, correct: false }] },
+  { q: { es: '¿Qué porcentaje del sistema inmune reside en el intestino?', en: 'What percentage of the immune system resides in the gut?' }, opts: [{ t: { es: '20%', en: '20%' }, correct: false }, { t: { es: '40%', en: '40%' }, correct: false }, { t: { es: '70%', en: '70%' }, correct: true }, { t: { es: '90%', en: '90%' }, correct: false }] },
+  { q: { es: '¿Cuál es el mejor tratamiento para Clostridioides difficile recurrente?', en: 'What is the best treatment for recurrent C. difficile?' }, opts: [{ t: { es: 'Más antibióticos', en: 'More antibiotics' }, correct: false }, { t: { es: 'Trasplante de Microbiota Fecal (TMF)', en: 'Fecal Microbiota Transplant (FMT)' }, correct: true }, { t: { es: 'Dieta líquida', en: 'Liquid diet' }, correct: false }, { t: { es: 'Cirugía intestinal', en: 'Bowel surgery' }, correct: false }] },
+];
+
+const INITIAL_TIME = 15;
+const LOCAL_RANKING_KEY = 'microbiota_ranking';
+
+function TimedQuiz({ lang, isMobile }) {
+  const [phase, setPhase] = useState('start'); // start | playing | finished
+  const [qIdx, setQIdx] = useState(0);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
+  const [selected, setSelected] = useState(null);
+  const [answered, setAnswered] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [ranking, setRanking] = useState(() => { try { return JSON.parse(localStorage.getItem(LOCAL_RANKING_KEY) || '[]'); } catch { return []; } });
+  const timerRef = useState(null);
+
+  useEffect(() => {
+    if (phase !== 'playing' || answered) return;
+    if (timeLeft <= 0) { handleAnswer(null); return; }
+    const t = setTimeout(() => setTimeLeft(tl => tl - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, timeLeft, answered]);
+
+  const startGame = () => {
+    setQIdx(0); setScore(0); setSelected(null); setAnswered(false);
+    setTimeLeft(INITIAL_TIME); setPhase('playing');
+  };
+
+  const handleAnswer = (opt) => {
+    if (answered) return;
+    setSelected(opt);
+    setAnswered(true);
+    const q = TIMED_QUESTIONS[qIdx];
+    const isCorrect = opt && opt.correct;
+    const timeBonus = Math.floor(timeLeft * 2);
+    if (isCorrect) setScore(s => s + 10 + timeBonus);
+    setTimeout(() => {
+      if (qIdx + 1 < TIMED_QUESTIONS.length) {
+        setQIdx(i => i + 1);
+        setSelected(null);
+        setAnswered(false);
+        setTimeLeft(INITIAL_TIME);
+      } else {
+        setPhase('finished');
+      }
+    }, 1000);
+  };
+
+  const saveScore = () => {
+    const name = playerName.trim() || (lang === 'es' ? 'Anónimo' : 'Anonymous');
+    const entry = { name, score, date: new Date().toLocaleDateString() };
+    const newRanking = [...ranking, entry].sort((a, b) => b.score - a.score).slice(0, 10);
+    setRanking(newRanking);
+    try { localStorage.setItem(LOCAL_RANKING_KEY, JSON.stringify(newRanking)); } catch {}
+    setPhase('ranking');
+  };
+
+  const timerPct = (timeLeft / INITIAL_TIME) * 100;
+  const timerColor = timeLeft > 8 ? '#4ade80' : timeLeft > 4 ? '#fbbf24' : '#f87171';
+
+  return (
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #fff7ed, #ffedd5)', border: '1px solid #fed7aa', padding: isMobile ? '20px' : '32px', boxShadow: '0 20px 60px -10px rgba(251,146,60,0.2)' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: '#7c2d12', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        ⏱️ {lang === 'es' ? 'Quiz Contrarreloj' : 'Speed Quiz'}
+      </h3>
+
+      {phase === 'start' && (
+        <div style={{ textAlign: 'center', paddingTop: '16px' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '12px' }}>🏆</div>
+          <p style={{ fontSize: '0.85rem', color: '#92400e', fontWeight: '600', marginBottom: '20px', lineHeight: 1.5 }}>
+            {lang === 'es' ? `${TIMED_QUESTIONS.length} preguntas · ${INITIAL_TIME}s por pregunta · Puntos extra por rapidez` : `${TIMED_QUESTIONS.length} questions · ${INITIAL_TIME}s per question · Bonus points for speed`}
+          </p>
+          <input
+            placeholder={lang === 'es' ? 'Tu nombre (opcional)' : 'Your name (optional)'}
+            value={playerName}
+            onChange={e => setPlayerName(e.target.value)}
+            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #fed7aa', marginBottom: '12px', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+          <button onClick={startGame} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: 'white', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(249,115,22,0.4)' }}>
+            🚀 {lang === 'es' ? '¡Comenzar!' : 'Start!'}
+          </button>
+          {ranking.length > 0 && (
+            <button onClick={() => setPhase('ranking')} style={{ marginTop: '8px', width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #fed7aa', background: 'white', fontWeight: '800', color: '#92400e', cursor: 'pointer', fontSize: '0.8rem' }}>
+              🏅 {lang === 'es' ? 'Ver Ranking' : 'View Ranking'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {phase === 'playing' && (
+        <div>
+          {/* Timer bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+            <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '10px', height: '10px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${timerPct}%`, background: timerColor, borderRadius: '10px', transition: 'width 1s linear, background 0.3s', boxShadow: `0 0 8px ${timerColor}88` }} />
+            </div>
+            <div style={{ fontWeight: '900', fontSize: '1.1rem', color: timerColor, minWidth: '28px', textAlign: 'right' }}>{timeLeft}</div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#92400e', fontWeight: '700', marginBottom: '14px' }}>
+            <span>{lang === 'es' ? 'Pregunta' : 'Question'} {qIdx + 1}/{TIMED_QUESTIONS.length}</span>
+            <span>⭐ {score} pts</span>
+          </div>
+          <p style={{ fontWeight: '800', fontSize: isMobile ? '0.9rem' : '1rem', color: '#1e293b', lineHeight: 1.5, marginBottom: '16px' }}>
+            {TIMED_QUESTIONS[qIdx].q[lang]}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {TIMED_QUESTIONS[qIdx].opts.map((opt, i) => {
+              let bg = 'white'; let border = '1.5px solid #e2e8f0'; let color = '#1e293b';
+              if (answered) {
+                if (opt.correct) { bg = '#dcfce7'; border = '1.5px solid #4ade80'; color = '#15803d'; }
+                else if (selected === opt) { bg = '#fee2e2'; border = '1.5px solid #f87171'; color = '#dc2626'; }
+              } else if (selected === opt) { bg = '#dbeafe'; border = '1.5px solid #60a5fa'; }
+              return (
+                <button key={i} onClick={() => handleAnswer(opt)} disabled={answered}
+                  style={{ padding: '12px 14px', borderRadius: '12px', border, background: bg, color, fontWeight: '700', fontSize: '0.82rem', cursor: answered ? 'default' : 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                  {answered && opt.correct ? '✅ ' : answered && selected === opt && !opt.correct ? '❌ ' : ''}{opt.t[lang]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {phase === 'finished' && (
+        <div style={{ textAlign: 'center', paddingTop: '10px' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🎯</div>
+          <h4 style={{ color: '#7c2d12', margin: '0 0 4px 0' }}>{lang === 'es' ? '¡Tiempo agotado!' : 'Time\'s Up!'}</h4>
+          <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#ea580c', marginBottom: '4px' }}>{score}</div>
+          <div style={{ fontSize: '0.7rem', color: '#92400e', marginBottom: '20px' }}>{lang === 'es' ? 'puntos finales' : 'final points'}</div>
+          <input
+            placeholder={lang === 'es' ? 'Tu nombre para el ranking' : 'Your name for the ranking'}
+            value={playerName}
+            onChange={e => setPlayerName(e.target.value)}
+            style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #fed7aa', marginBottom: '10px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+          <button onClick={saveScore} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: 'white', fontWeight: '900', cursor: 'pointer', marginBottom: '8px' }}>
+            💾 {lang === 'es' ? 'Guardar Puntuación' : 'Save Score'}
+          </button>
+          <button onClick={startGame} style={{ width: '100%', padding: '10px', borderRadius: '12px', border: '1.5px solid #fed7aa', background: 'white', fontWeight: '800', color: '#92400e', cursor: 'pointer', fontSize: '0.85rem' }}>
+            🔄 {lang === 'es' ? 'Jugar de nuevo' : 'Play Again'}
+          </button>
+        </div>
+      )}
+
+      {phase === 'ranking' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h4 style={{ margin: 0, color: '#7c2d12', fontWeight: '900' }}>🏅 {lang === 'es' ? 'Ranking Local' : 'Local Ranking'}</h4>
+            <button onClick={() => setPhase('start')} style={{ padding: '6px 12px', borderRadius: '10px', border: '1.5px solid #fed7aa', background: 'white', cursor: 'pointer', fontWeight: '800', fontSize: '0.7rem', color: '#92400e' }}>← {lang === 'es' ? 'Volver' : 'Back'}</button>
+          </div>
+          {ranking.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#92400e', fontSize: '0.85rem' }}>{lang === 'es' ? 'Aún no hay puntuaciones' : 'No scores yet'}</p>
+          ) : ranking.map((entry, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', background: i === 0 ? '#fef3c7' : 'white', marginBottom: '6px', border: '1px solid #fed7aa' }}>
+              <div style={{ fontSize: '1.2rem', minWidth: '28px', textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</div>
+              <div style={{ flex: 1, fontWeight: '800', fontSize: '0.85rem' }}>{entry.name}</div>
+              <div style={{ fontWeight: '900', color: '#ea580c' }}>{entry.score} pts</div>
+              <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>{entry.date}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 🔬 6. MICROSCOPIO VIRTUAL
+// ============================================================
+const MICROSCOPE_BACTERIA = [
+  {
+    id: 'lacto', name: 'Lactobacillus rhamnosus', shape: 'rod', color: '#4ade80', gram: '+', size: 12,
+    desc: { es: 'Bacilo Gram+ de 2-4μm. Forma cadenas en cultivo. Produce ácido láctico L(+).', en: 'Gram+ rod of 2-4μm. Forms chains in culture. Produces L(+) lactic acid.' },
+    svg: (c) => `<rect x="20" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.85"/>
+      <rect x="35" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.75"/>
+      <rect x="50" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.65"/>`,
+  },
+  {
+    id: 'bifido', name: 'Bifidobacterium infantis', shape: 'bifid', color: '#38bdf8', gram: '+', size: 10,
+    desc: { es: 'Bacilo Gram+ bifurcado en forma de V o Y. Domina la microbiota del lactante.', en: 'Bifurcated Gram+ rod in V or Y shape. Dominates infant microbiota.' },
+    svg: (c) => `<path d="M60 80 L60 40 L40 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.85"/>
+      <path d="M60 40 L80 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.85"/>
+      <path d="M80 80 L80 40 L60 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.7"/>`,
+  },
+  {
+    id: 'akkerm', name: 'Akkermansia muciniphila', shape: 'coccus', color: '#fb923c', gram: '-', size: 9,
+    desc: { es: 'Coco Gram- oval de 1μm. Anaerobio estricto. Único habitante de la capa de mucina.', en: 'Oval Gram- coccus of 1μm. Strict anaerobe. Sole inhabitant of the mucin layer.' },
+    svg: (c) => `<ellipse cx="50" cy="55" rx="25" ry="22" fill="${c}" opacity="0.85"/>
+      <ellipse cx="75" cy="40" rx="20" ry="18" fill="${c}" opacity="0.75"/>
+      <ellipse cx="30" cy="35" rx="18" ry="16" fill="${c}" opacity="0.7"/>`,
+  },
+  {
+    id: 'cdiff', name: 'Clostridioides difficile', shape: 'spore', color: '#f87171', gram: '+', size: 14,
+    desc: { es: 'Bacilo Gram+ formador de esporas. Las esporas son resistentes al calor y desinfectantes comunes.', en: 'Spore-forming Gram+ rod. Spores are resistant to heat and common disinfectants.' },
+    svg: (c) => `<rect x="15" y="38" width="55" height="25" rx="12" fill="${c}" opacity="0.85"/>
+      <ellipse cx="75" cy="50" rx="14" ry="16" fill="${c}cc" stroke="${c}" strokeWidth="3"/>
+      <rect x="30" y="68" width="50" height="22" rx="11" fill="${c}" opacity="0.7"/>
+      <ellipse cx="84" cy="80" rx="12" ry="14" fill="${c}aa" stroke="${c}" strokeWidth="3"/>`,
+  },
+  {
+    id: 'helico', name: 'Helicobacter pylori', shape: 'helix', color: '#c084fc', gram: '-', size: 8,
+    desc: { es: 'Bacilo Gram- espiral de 3-5μm. Sus flagelos le permiten penetrar el moco gástrico.', en: 'Spiral Gram- rod of 3-5μm. Its flagella allow it to penetrate gastric mucus.' },
+    svg: (c) => `<path d="M15 60 Q30 30 50 50 Q70 70 85 40" stroke="${c}" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.85"/>
+      <path d="M80 35 L90 25 M80 35 L92 42" stroke="${c}" strokeWidth="5" strokeLinecap="round"/>
+      <path d="M12 65 L3 55 M12 65 L2 72" stroke="${c}" strokeWidth="5" strokeLinecap="round"/>`,
+  },
+  {
+    id: 'faecali', name: 'Faecalibacterium prausnitzii', shape: 'rod', color: '#34d399', gram: '+', size: 11,
+    desc: { es: 'Bacilo Gram+ de 2-5μm. Produce el 20% del butirato colónico total. Extremadamente sensible al oxígeno.', en: 'Gram+ rod of 2-5μm. Produces 20% of total colonic butyrate. Extremely oxygen-sensitive.' },
+    svg: (c) => `<rect x="25" y="40" width="65" height="22" rx="11" fill="${c}" opacity="0.85"/>
+      <line x1="38" y1="40" x2="30" y2="28" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="55" y1="40" x2="50" y2="26" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="70" y1="40" x2="68" y2="26" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="38" y1="62" x2="30" y2="74" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="55" y1="62" x2="50" y2="76" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>`,
+  },
+];
+
+function VirtualMicroscope({ lang, isMobile }) {
+  const [selected, setSelected] = useState(0);
+  const [zoom, setZoom] = useState(40);
+  const [brightness, setBrightness] = useState(70);
+  const [contrast, setContrast] = useState(50);
+  const [stain, setStain] = useState('gram'); // gram | fluorescent | neutral
+
+  const bact = MICROSCOPE_BACTERIA[selected];
+  const stainColors = {
+    gram: bact.gram === '+' ? '#7c3aed' : '#ef4444',
+    fluorescent: bact.color,
+    neutral: '#94a3b8',
+  };
+  const bgColors = { gram: '#fdf4ff', fluorescent: '#0f172a', neutral: '#f8fafc' };
+  const displayColor = stainColors[stain];
+  const bgColor = bgColors[stain];
+
+  const zoomScale = zoom / 40;
+
+  return (
+    <div style={{ borderRadius: '30px', background: '#1c1917', padding: isMobile ? '20px' : '32px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        🔬 {lang === 'es' ? 'Microscopio Virtual' : 'Virtual Microscope'}
+      </h3>
+      <p style={{ margin: '0 0 16px 0', fontSize: '0.72rem', color: '#78716c', fontWeight: '600' }}>
+        {lang === 'es' ? 'Observa la morfología bacteriana como en laboratorio clínico' : 'Observe bacterial morphology as in a clinical lab'}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
+        {/* Microscope viewer */}
+        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: isMobile ? '240px' : '280px', height: isMobile ? '240px' : '280px',
+            borderRadius: '50%', overflow: 'hidden',
+            background: bgColor,
+            border: '12px solid #292524',
+            boxShadow: `0 0 0 4px #44403c, 0 0 40px rgba(0,0,0,0.8), inset 0 0 ${brightness}px rgba(255,255,255,${brightness / 200})`,
+            position: 'relative',
+            transition: 'background 0.3s',
+          }}>
+            {/* Grid overlay for lens effect */}
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: stain === 'fluorescent' ? 'none' : 'radial-gradient(circle, transparent 60%, rgba(0,0,0,0.15) 100%)', zIndex: 2, pointerEvents: 'none' }} />
+            {/* Crosshair */}
+            <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '1px', background: 'rgba(0,0,0,0.12)' }} />
+              <div style={{ position: 'absolute', left: '50%', top: '10%', bottom: '10%', width: '1px', background: 'rgba(0,0,0,0.12)' }} />
+            </div>
+            {/* Bacteria SVG */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${zoomScale})`, transition: 'transform 0.3s', filter: `contrast(${0.8 + contrast / 100}) brightness(${0.5 + brightness / 100})` }}>
+              <svg viewBox="0 0 100 100" width="80%" height="80%" dangerouslySetInnerHTML={{ __html: bact.svg(displayColor) }} />
+            </div>
+            {/* Scan line effect */}
+            {stain === 'fluorescent' && (
+              <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,100,0.03) 4px)', zIndex: 4, pointerEvents: 'none' }} />
+            )}
+          </div>
+          {/* Microscope body decoration */}
+          <div style={{ fontSize: '0.6rem', color: '#78716c', fontWeight: '700', textAlign: 'center' }}>
+            {lang === 'es' ? `Objetivo: ×${zoom}` : `Objective: ×${zoom}`} | {lang === 'es' ? 'Tinción' : 'Stain'}: {stain === 'gram' ? 'Gram' : stain === 'fluorescent' ? (lang === 'es' ? 'Fluorescente' : 'Fluorescent') : (lang === 'es' ? 'Neutro' : 'Neutral')}
+          </div>
+        </div>
+
+        {/* Controls + Info */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Stain selector */}
+          <div>
+            <div style={{ fontSize: '0.6rem', color: '#78716c', fontWeight: '800', marginBottom: '6px' }}>{lang === 'es' ? 'TIPO DE TINCIÓN' : 'STAIN TYPE'}</div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[['gram', lang === 'es' ? 'Gram' : 'Gram'], ['fluorescent', lang === 'es' ? 'Fluoresc.' : 'Fluoresc.'], ['neutral', lang === 'es' ? 'Neutro' : 'Neutral']].map(([k, l]) => (
+                <button key={k} onClick={() => setStain(k)} style={{ flex: 1, padding: '7px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem', background: stain === k ? 'white' : 'rgba(255,255,255,0.07)', color: stain === k ? '#1c1917' : '#78716c', transition: 'all 0.2s' }}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Controls */}
+          {[
+            { label: { es: 'Zoom', en: 'Zoom' }, val: zoom, set: setZoom, min: 10, max: 100, unit: '×' },
+            { label: { es: 'Brillo', en: 'Brightness' }, val: brightness, set: setBrightness, min: 10, max: 100, unit: '%' },
+            { label: { es: 'Contraste', en: 'Contrast' }, val: contrast, set: setContrast, min: 0, max: 100, unit: '%' },
+          ].map(ctrl => (
+            <div key={ctrl.label.es}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#78716c', fontWeight: '800', marginBottom: '4px' }}>
+                <span>{ctrl.label[lang]}</span><span style={{ color: 'white' }}>{ctrl.val}{ctrl.unit}</span>
+              </div>
+              <input type="range" min={ctrl.min} max={ctrl.max} value={ctrl.val}
+                onChange={e => ctrl.set(Number(e.target.value))}
+                style={{ width: '100%', accentColor: bact.color, cursor: 'pointer' }}
+              />
+            </div>
+          ))}
+
+          {/* Bacteria info */}
+          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '12px', border: `1px solid ${bact.color}33` }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ fontStyle: 'italic', fontWeight: '900', color: 'white', fontSize: '0.82rem' }}>{bact.name}</div>
+              <div style={{ padding: '2px 8px', borderRadius: '8px', background: bact.gram === '+' ? '#7c3aed33' : '#ef444433', color: bact.gram === '+' ? '#c4b5fd' : '#fca5a5', fontWeight: '800', fontSize: '0.55rem', whiteSpace: 'nowrap' }}>Gram {bact.gram}</div>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: '#a8a29e', lineHeight: 1.5 }}>{bact.desc[lang]}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bacteria selector */}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {MICROSCOPE_BACTERIA.map((b, i) => (
+          <button key={b.id} onClick={() => setSelected(i)} style={{
+            flex: '0 0 auto', padding: '6px 12px', borderRadius: '10px', border: `1.5px solid ${selected === i ? b.color : 'rgba(255,255,255,0.08)'}`,
+            background: selected === i ? `${b.color}22` : 'rgba(255,255,255,0.04)',
+            color: selected === i ? b.color : '#78716c', cursor: 'pointer', fontWeight: '700', fontSize: '0.65rem',
+            whiteSpace: 'nowrap', transition: 'all 0.2s',
+          }}>
+            {b.name.split(' ')[0]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+
 function App() {
   const [lang, setLang] = useState('es'); // Controlador de idioma global
   const [current, setCurrent] = useState(0);
@@ -312,6 +1470,9 @@ function App() {
           </div>
         </div>
 
+        {/* 🚂 TREN DE LA MICROBIOTA */}
+        <BacteriaTrainGame lang={lang} isMobile={isMobile} />
+
         {/* LABORATORIO Y TEST */}
         <div style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', gap: '30px' }}>
           
@@ -430,6 +1591,25 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* 🗺️ MAPA DEL INTESTINO */}
+        <InteractiveGutMap lang={lang} isMobile={isMobile} />
+
+        {/* 📊 GRÁFICA DE DIVERSIDAD */}
+        <DiversityChart lang={lang} isMobile={isMobile} />
+
+        {/* 🎴 + 🧬 ROW */}
+        <div style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', gap: '30px' }}>
+          <FlashcardDeck lang={lang} isMobile={isMobile} />
+          <GutBrainSimulator lang={lang} isMobile={isMobile} />
+        </div>
+
+        {/* ⏱️ + 🔬 ROW */}
+        <div style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', gap: '30px' }}>
+          <TimedQuiz lang={lang} isMobile={isMobile} />
+          <VirtualMicroscope lang={lang} isMobile={isMobile} />
+        </div>
+
       </main>
 
       <footer style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
