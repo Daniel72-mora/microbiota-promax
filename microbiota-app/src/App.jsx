@@ -610,77 +610,205 @@ function BacteriaTrainGame({ lang, isMobile }) {
 }
 
 // ============================================================
-// 🗺️ 1. MAPA DEL INTESTINO INTERACTIVO
+// 🫁 1. SISTEMA DIGESTIVO INTERACTIVO
 // ============================================================
-const GUT_SECTIONS = [
-  { id: 'esofago', label: { es: 'Esófago', en: 'Esophagus' }, x: 50, y: 4, r: 5, color: '#f87171', bacteria: { es: 'Streptococcus salivarius', en: 'Streptococcus salivarius' }, info: { es: 'Microbiota escasa. El peristaltismo impide colonización duradera. pH ~6.', en: 'Sparse microbiota. Peristalsis prevents lasting colonization. pH ~6.' } },
-  { id: 'estomago', label: { es: 'Estómago', en: 'Stomach' }, x: 45, y: 16, r: 8, color: '#fb923c', bacteria: { es: 'Helicobacter pylori', en: 'Helicobacter pylori' }, info: { es: 'Ambiente muy ácido (pH 1-3). Solo Helicobacter pylori puede sobrevivir. Afecta a ~50% de la población mundial.', en: 'Very acidic environment (pH 1-3). Only H. pylori can survive. Affects ~50% of the world population.' } },
-  { id: 'intestino_delgado', label: { es: 'Intestino Delgado', en: 'Small Intestine' }, x: 60, y: 38, r: 7, color: '#facc15', bacteria: { es: 'Lactobacillus, Enterococcus', en: 'Lactobacillus, Enterococcus' }, info: { es: 'pH 6-7. Absorción de nutrientes. Bilis limita bacterias en duodeno. Densidad: 10³–10⁷ UFC/mL.', en: 'pH 6-7. Nutrient absorption. Bile limits bacteria in duodenum. Density: 10³–10⁷ CFU/mL.' } },
-  { id: 'colon', label: { es: 'Colon', en: 'Colon' }, x: 38, y: 62, r: 10, color: '#4ade80', bacteria: { es: 'Bacteroides, Bifidobacterium, Faecalibacterium', en: 'Bacteroides, Bifidobacterium, Faecalibacterium' }, info: { es: 'El ecosistema más denso: 10¹¹–10¹² UFC/mL. Fermentación anaeróbica produce AGCC (Butirato, Propionato, Acetato). 70% del sistema inmune reside aquí.', en: 'The densest ecosystem: 10¹¹–10¹² CFU/mL. Anaerobic fermentation produces SCFAs (Butyrate, Propionate, Acetate). 70% of the immune system resides here.' } },
-  { id: 'recto', label: { es: 'Recto', en: 'Rectum' }, x: 55, y: 80, r: 5, color: '#818cf8', bacteria: { es: 'Bacteroides fragilis', en: 'Bacteroides fragilis' }, info: { es: 'Reservorio final. Alta concentración de metanógenos. Importante para diagnóstico por análisis de heces.', en: 'Final reservoir. High methanogen concentration. Important for stool-based diagnosis.' } },
+const DIGESTIVE_SECTIONS = [
+  {
+    id: 'esofago',
+    label: { es: 'Esófago', en: 'Esophagus' },
+    color: '#f87171', dotColor: '#ef4444',
+    bacteria: { es: 'Streptococcus salivarius, Prevotella', en: 'Streptococcus salivarius, Prevotella' },
+    ph: 'pH ~6',
+    density: { es: '10¹–10³ UFC/mL', en: '10¹–10³ CFU/mL' },
+    info: { es: 'Microbiota escasa. El peristaltismo rápido (~3–5 cm/s) impide la colonización duradera. La microbiota oral transitoria domina.', en: 'Sparse microbiota. Rapid peristalsis (~3–5 cm/s) prevents lasting colonization. Transient oral microbiota dominates.' },
+    icon: '🔴',
+  },
+  {
+    id: 'estomago',
+    label: { es: 'Estómago', en: 'Stomach' },
+    color: '#fb923c', dotColor: '#f97316',
+    bacteria: { es: 'Helicobacter pylori (único colonizador estable)', en: 'Helicobacter pylori (only stable colonizer)' },
+    ph: 'pH 1–3',
+    density: { es: '10¹–10³ UFC/mL', en: '10¹–10³ CFU/mL' },
+    info: { es: 'Ambiente extremadamente ácido. Solo H. pylori sobrevive gracias a su ureasa, que neutraliza el ácido local. Coloniza al ~50% de la humanidad y puede causar úlceras y adenocarcinoma gástrico.', en: 'Extremely acidic environment. Only H. pylori survives thanks to its urease, which locally neutralizes acid. It colonizes ~50% of humanity and can cause ulcers and gastric adenocarcinoma.' },
+    icon: '🟠',
+  },
+  {
+    id: 'intestino_delgado',
+    label: { es: 'Intestino Delgado', en: 'Small Intestine' },
+    color: '#facc15', dotColor: '#eab308',
+    bacteria: { es: 'Lactobacillus, Enterococcus, Streptococcus', en: 'Lactobacillus, Enterococcus, Streptococcus' },
+    ph: 'pH 6–7',
+    density: { es: '10³–10⁷ UFC/mL', en: '10³–10⁷ CFU/mL' },
+    info: { es: 'Principal sitio de absorción de nutrientes. La bilis y el tránsito rápido limitan la densidad bacteriana. El íleon terminal es más rico. Clave en la presentación de antígenos al sistema MALT.', en: 'Primary site of nutrient absorption. Bile and fast transit limit bacterial density. The terminal ileum is richer. Key in antigen presentation to the MALT system.' },
+    icon: '🟡',
+  },
+  {
+    id: 'colon',
+    label: { es: 'Colon', en: 'Colon' },
+    color: '#4ade80', dotColor: '#16a34a',
+    bacteria: { es: 'Bacteroides, Bifidobacterium, Faecalibacterium prausnitzii, Akkermansia', en: 'Bacteroides, Bifidobacterium, Faecalibacterium prausnitzii, Akkermansia' },
+    ph: 'pH 5.5–7',
+    density: { es: '10¹¹–10¹² UFC/mL', en: '10¹¹–10¹² CFU/mL' },
+    info: { es: 'El ecosistema microbiano más denso del cuerpo. La fermentación anaeróbica produce AGCC (Butirato, Propionato, Acetato) que nutren el epitelio. El 70% del sistema inmune reside en la lámina propia del colon.', en: 'The body\'s densest microbial ecosystem. Anaerobic fermentation produces SCFAs (Butyrate, Propionate, Acetate) that nourish the epithelium. 70% of the immune system resides in the colonic lamina propria.' },
+    icon: '🟢',
+  },
+  {
+    id: 'recto',
+    label: { es: 'Recto', en: 'Rectum' },
+    color: '#818cf8', dotColor: '#6366f1',
+    bacteria: { es: 'Bacteroides fragilis, metanógenos (Methanobrevibacter)', en: 'Bacteroides fragilis, methanogens (Methanobrevibacter)' },
+    ph: 'pH 6.5–7',
+    density: { es: '10¹¹–10¹² UFC/mL', en: '10¹¹–10¹² CFU/mL' },
+    info: { es: 'Reservorio final. Alta concentración de metanógenos que convierten H₂ en metano. La composición de esta zona es la que se analiza en la metagenómica de heces clínica y en el Trasplante de Microbiota Fecal (TMF).', en: 'Final reservoir. High concentration of methanogens converting H₂ into methane. This zone\'s composition is analyzed in clinical fecal metagenomics and Fecal Microbiota Transplant (FMT).' },
+    icon: '🟣',
+  },
 ];
 
 function InteractiveGutMap({ lang, isMobile }) {
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
-
   const active = selected || hovered;
-  const activeSec = GUT_SECTIONS.find(s => s.id === active);
+  const activeSec = DIGESTIVE_SECTIONS.find(s => s.id === active);
 
   return (
-    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #bbf7d0', padding: isMobile ? '20px' : '32px', boxShadow: '0 20px 60px -10px rgba(16,185,129,0.15)' }}>
-      <h3 style={{ margin: '0 0 6px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: '#064e3b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        🗺️ {lang === 'es' ? 'Mapa del Intestino Interactivo' : 'Interactive Gut Map'}
+    <div style={{ borderRadius: '30px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #bbf7d0', padding: isMobile ? '16px' : '32px', boxShadow: '0 20px 60px -10px rgba(16,185,129,0.15)' }}>
+      <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: '#064e3b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        🫁 {lang === 'es' ? 'Sistema Digestivo Interactivo' : 'Interactive Digestive System'}
       </h3>
-      <p style={{ margin: '0 0 20px 0', fontSize: '0.75rem', color: '#065f46', fontWeight: '600' }}>
-        {lang === 'es' ? 'Toca cada zona para explorar su microbiota' : 'Tap each zone to explore its microbiota'}
+      <p style={{ margin: '0 0 16px 0', fontSize: '0.75rem', color: '#065f46', fontWeight: '600' }}>
+        {lang === 'es' ? 'Toca cada zona para explorar su microbiota, pH y función clínica' : 'Tap each zone to explore its microbiota, pH and clinical function'}
       </p>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: 'flex-start' }}>
-        {/* SVG gut diagram */}
-        <div style={{ flex: '0 0 auto', width: isMobile ? '100%' : '260px', position: 'relative' }}>
-          <svg viewBox="0 0 100 100" style={{ width: '100%', height: isMobile ? '280px' : '360px' }}>
-            {/* Gut silhouette path */}
-            <path d="M50,2 Q60,8 58,20 Q56,30 65,40 Q72,50 65,62 Q58,72 55,80 Q52,88 50,95" stroke="#d1fae5" strokeWidth="12" fill="none" strokeLinecap="round"/>
-            <path d="M50,2 Q40,8 42,20 Q44,30 35,42 Q28,54 35,65 Q42,74 45,80 Q48,88 50,95" stroke="#d1fae5" strokeWidth="12" fill="none" strokeLinecap="round"/>
-            {/* Connector curves for colon */}
-            <path d="M35,65 Q20,70 25,80 Q30,88 45,80" stroke="#d1fae5" strokeWidth="10" fill="none" strokeLinecap="round"/>
-            {/* Interactive zones */}
-            {GUT_SECTIONS.map(sec => (
-              <g key={sec.id} onClick={() => setSelected(selected === sec.id ? null : sec.id)} onMouseEnter={() => setHovered(sec.id)} onMouseLeave={() => setHovered(null)} style={{ cursor: 'pointer' }}>
-                <circle cx={sec.x} cy={sec.y} r={sec.r + (active === sec.id ? 3 : 0)} fill={sec.color} opacity={active === sec.id ? 1 : 0.75} style={{ transition: 'all 0.2s', filter: active === sec.id ? `drop-shadow(0 0 8px ${sec.color})` : 'none' }} />
-                <text x={sec.x} y={sec.y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={sec.r * 0.7} fontWeight="900" fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                  {active === sec.id ? '★' : '●'}
-                </text>
-                <text x={sec.x < 50 ? sec.x - sec.r - 2 : sec.x + sec.r + 2} y={sec.y} textAnchor={sec.x < 50 ? 'end' : 'start'} dominantBaseline="middle" fontSize="3.5" fontWeight="700" fill="#064e3b" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                  {sec.label[lang]}
-                </text>
-              </g>
-            ))}
-          </svg>
+
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '24px', alignItems: 'flex-start' }}>
+
+        {/* ── Anatomical IMAGE with overlaid hotspots ── */}
+        <div style={{ flex: '0 0 auto', width: isMobile ? '100%' : '300px', display: 'flex', justifyContent: 'center' }}>
+          {/* Wrapper keeps the image + SVG overlay perfectly aligned */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: isMobile ? '280px' : '300px',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.13)',
+            background: '#eef3f8',
+          }}>
+            {/* Real anatomical image */}
+            <img
+              src="./digestive_system.png"
+              alt={lang === 'es' ? 'Sistema Digestivo' : 'Digestive System'}
+              style={{ width: '100%', display: 'block', userSelect: 'none', pointerEvents: 'none' }}
+            />
+
+            {/* SVG overlay — same bounding box as the image (viewBox matches natural aspect ratio 1456×816 cropped to subject) */}
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
+            >
+              {/* 
+                Hotspot % positions calibrated to the image:
+                esofago          → tube entering top-center         ~50% x, 10% y
+                estomago         → pink stomach bag right of center  ~56% x, 43% y
+                intestino_delgado→ central loops                     ~60% x, 67% y
+                colon            → outer frame of bowel              ~33% x, 65% y
+                recto            → lower tube exiting down           ~50% x, 91% y
+              */}
+              {[
+                { id: 'esofago',           px: 50, py: 10 },
+                { id: 'estomago',          px: 57, py: 43 },
+                { id: 'intestino_delgado', px: 51, py: 70 },
+                { id: 'colon',             px: 40, py: 64 },
+                { id: 'recto',             px: 50, py: 91 },
+              ].map(h => {
+                const sec = DIGESTIVE_SECTIONS.find(s => s.id === h.id);
+                const isActive = active === h.id;
+                const labelRight = h.px > 50;
+                return (
+                  <g key={h.id}
+                    onClick={() => setSelected(selected === h.id ? null : h.id)}
+                    onMouseEnter={() => setHovered(h.id)}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{ cursor: 'pointer' }}>
+                    {/* Outer pulse ring */}
+                    <circle cx={h.px} cy={h.py} r={isActive ? 7 : 5}
+                      fill={sec.dotColor} opacity={isActive ? 0.18 : 0}
+                      style={{ transition: 'all 0.2s' }}/>
+                    {/* Dot */}
+                    <circle cx={h.px} cy={h.py} r={isActive ? 4.2 : 3.2}
+                      fill={sec.dotColor}
+                      stroke="white"
+                      strokeWidth="1"
+                      opacity={isActive ? 1 : 0.88}
+                      style={{ transition: 'all 0.2s', filter: isActive ? `drop-shadow(0 0 3px ${sec.color})` : 'none' }}/>
+                    {/* Star / dot icon */}
+                    <text x={h.px} y={h.py + 0.5}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fontSize="3" fontWeight="900" fill="white"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      {isActive ? '★' : '•'}
+                    </text>
+                    {/* Label pill */}
+                    <rect
+                      x={labelRight ? h.px + 5.5 : h.px - 5.5 - (sec.label[lang].length * 1.55)}
+                      y={h.py - 2.8}
+                      width={sec.label[lang].length * 1.55 + 2}
+                      height="5.5"
+                      rx="2.5"
+                      fill={isActive ? sec.dotColor : 'rgba(255,255,255,0.85)'}
+                      style={{ transition: 'fill 0.2s' }}/>
+                    <text
+                      x={labelRight ? h.px + 6.5 : h.px - 5}
+                      y={h.py + 0.4}
+                      textAnchor={labelRight ? 'start' : 'end'}
+                      dominantBaseline="middle"
+                      fontSize="3.2"
+                      fontWeight="800"
+                      fill={isActive ? 'white' : sec.dotColor}
+                      style={{ pointerEvents: 'none', userSelect: 'none', transition: 'fill 0.2s' }}>
+                      {sec.label[lang]}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
         </div>
-        {/* Info panel */}
-        <div style={{ flex: 1 }}>
+
+        {/* ── Info panel ── */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           {activeSec ? (
             <div style={{ background: 'white', borderRadius: '20px', padding: '20px', border: `2px solid ${activeSec.color}`, boxShadow: `0 8px 30px ${activeSec.color}33`, animation: 'fadeIn 0.25s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: activeSec.color, boxShadow: `0 0 10px ${activeSec.color}` }} />
-                <span style={{ fontWeight: '900', fontSize: '1.1rem', color: '#0f172a' }}>{activeSec.label[lang]}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: activeSec.dotColor, boxShadow: `0 0 12px ${activeSec.color}` }}/>
+                <span style={{ fontWeight: '900', fontSize: '1.15rem', color: '#0f172a' }}>{activeSec.label[lang]}</span>
+                <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '20px', background: activeSec.color + '22', color: activeSec.dotColor, fontWeight: '800', fontSize: '0.65rem' }}>{activeSec.ph}</span>
               </div>
-              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#64748b', marginBottom: '4px' }}>🦠 {lang === 'es' ? 'BACTERIAS DOMINANTES' : 'DOMINANT BACTERIA'}</div>
-                <div style={{ fontStyle: 'italic', fontWeight: '700', color: '#1e293b', fontSize: '0.88rem' }}>{activeSec.bacteria[lang]}</div>
+
+              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '10px 14px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', marginBottom: '4px' }}>🦠 {lang === 'es' ? 'BACTERIAS DOMINANTES' : 'DOMINANT BACTERIA'}</div>
+                <div style={{ fontStyle: 'italic', fontWeight: '700', color: '#1e293b', fontSize: '0.85rem', lineHeight: 1.4 }}>{activeSec.bacteria[lang]}</div>
               </div>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.6' }}>{activeSec.info[lang]}</p>
+
+              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '10px 14px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: '800', color: '#64748b', marginBottom: '4px' }}>🔢 {lang === 'es' ? 'DENSIDAD BACTERIANA' : 'BACTERIAL DENSITY'}</div>
+                <div style={{ fontWeight: '700', color: activeSec.dotColor, fontSize: '0.85rem' }}>{activeSec.density[lang]}</div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.65' }}>{activeSec.info[lang]}</p>
             </div>
           ) : (
             <div style={{ background: 'white', borderRadius: '20px', padding: '24px', textAlign: 'center', border: '2px dashed #a7f3d0' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>👆</div>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem', fontWeight: '600' }}>
-                {lang === 'es' ? 'Selecciona una zona del intestino para ver su microbiota, pH y función clínica.' : 'Select a gut zone to see its microbiota, pH and clinical function.'}
+              <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '0.85rem', fontWeight: '600', lineHeight: 1.5 }}>
+                {lang === 'es'
+                  ? 'Selecciona una zona del sistema digestivo para ver su microbiota, pH y función clínica.'
+                  : 'Select a zone of the digestive system to see its microbiota, pH and clinical function.'}
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '16px', justifyContent: 'center' }}>
-                {GUT_SECTIONS.map(s => (
-                  <button key={s.id} onClick={() => setSelected(s.id)} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', background: s.color + '22', color: s.color, fontWeight: '800', fontSize: '0.7rem', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                {DIGESTIVE_SECTIONS.map(s => (
+                  <button key={s.id} onClick={() => setSelected(s.id)} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', background: s.color + '22', color: s.dotColor, fontWeight: '800', fontSize: '0.7rem', cursor: 'pointer' }}>
                     {s.label[lang]}
                   </button>
                 ))}
@@ -1162,54 +1290,224 @@ function TimedQuiz({ lang, isMobile }) {
 }
 
 // ============================================================
-// 🔬 6. MICROSCOPIO VIRTUAL
+// 🔬 6. MICROSCOPIO VIRTUAL — BACTERIAS ULTRA-REALISTAS
 // ============================================================
 const MICROSCOPE_BACTERIA = [
   {
     id: 'lacto', name: 'Lactobacillus rhamnosus', shape: 'rod', color: '#4ade80', gram: '+', size: 12,
-    desc: { es: 'Bacilo Gram+ de 2-4μm. Forma cadenas en cultivo. Produce ácido láctico L(+).', en: 'Gram+ rod of 2-4μm. Forms chains in culture. Produces L(+) lactic acid.' },
-    svg: (c) => `<rect x="20" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.85"/>
-      <rect x="35" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.75"/>
-      <rect x="50" y="35" width="60" height="30" rx="15" fill="${c}" opacity="0.65"/>`,
+    desc: { es: 'Bacilo Gram+ de 2–4 μm. Forma cadenas. Produce ácido láctico L(+). El probiótico más estudiado del mundo (cepa GG). Produce GABA con efecto ansiolítico.', en: 'Gram+ rod of 2–4 μm. Forms chains. Produces L(+) lactic acid. World\'s most studied probiotic (GG strain). Produces GABA with anxiolytic effect.' },
+    // realistic chain of rods with membrane texture, septa, cytoplasm gradient
+    svg: (c) => `
+      <defs>
+        <radialGradient id="rg1a" cx="38%" cy="32%" r="62%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
+          <stop offset="55%" stop-color="${c}" stop-opacity="0.95"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+        </radialGradient>
+        <filter id="f1"><feGaussianBlur stdDeviation="0.6"/></filter>
+      </defs>
+      <!-- Cell wall halo -->
+      <rect x="8" y="30" width="38" height="18" rx="9" fill="${c}" opacity="0.18" filter="url(#f1)"/>
+      <rect x="30" y="27" width="38" height="18" rx="9" fill="${c}" opacity="0.15" filter="url(#f1)"/>
+      <rect x="52" y="30" width="38" height="18" rx="9" fill="${c}" opacity="0.12" filter="url(#f1)"/>
+      <!-- Rod 1 -->
+      <rect x="9" y="32" width="36" height="14" rx="7" fill="url(#rg1a)"/>
+      <rect x="9" y="32" width="36" height="14" rx="7" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.7"/>
+      <line x1="27" y1="33" x2="27" y2="45" stroke="white" stroke-width="0.8" opacity="0.35"/>
+      <ellipse cx="17" cy="39" rx="5" ry="3.5" fill="white" opacity="0.15"/>
+      <!-- Septum 1→2 -->
+      <line x1="45" y1="34" x2="45" y2="44" stroke="${c}" stroke-width="1.5" opacity="0.5"/>
+      <!-- Rod 2 -->
+      <rect x="31" y="29" width="36" height="14" rx="7" fill="url(#rg1a)"/>
+      <rect x="31" y="29" width="36" height="14" rx="7" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.7"/>
+      <line x1="49" y1="30" x2="49" y2="42" stroke="white" stroke-width="0.8" opacity="0.35"/>
+      <ellipse cx="39" cy="36" rx="5" ry="3.5" fill="white" opacity="0.15"/>
+      <!-- Septum 2→3 -->
+      <line x1="67" y1="31" x2="67" y2="41" stroke="${c}" stroke-width="1.5" opacity="0.5"/>
+      <!-- Rod 3 -->
+      <rect x="53" y="32" width="36" height="14" rx="7" fill="url(#rg1a)"/>
+      <rect x="53" y="32" width="36" height="14" rx="7" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.7"/>
+      <line x1="71" y1="33" x2="71" y2="45" stroke="white" stroke-width="0.8" opacity="0.35"/>
+      <ellipse cx="61" cy="39" rx="5" ry="3.5" fill="white" opacity="0.15"/>
+      <!-- Flagella (peritrichous) -->
+      <path d="M12 32 Q5 22 14 14 Q22 6 10 2" stroke="${c}" stroke-width="0.9" fill="none" opacity="0.5"/>
+      <path d="M78 32 Q85 20 78 12 Q71 4 80 0" stroke="${c}" stroke-width="0.9" fill="none" opacity="0.45"/>
+      <path d="M45 43 Q52 55 44 62 Q36 69 48 75" stroke="${c}" stroke-width="0.9" fill="none" opacity="0.45"/>`,
   },
   {
     id: 'bifido', name: 'Bifidobacterium infantis', shape: 'bifid', color: '#38bdf8', gram: '+', size: 10,
-    desc: { es: 'Bacilo Gram+ bifurcado en forma de V o Y. Domina la microbiota del lactante.', en: 'Bifurcated Gram+ rod in V or Y shape. Dominates infant microbiota.' },
-    svg: (c) => `<path d="M60 80 L60 40 L40 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.85"/>
-      <path d="M60 40 L80 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.85"/>
-      <path d="M80 80 L80 40 L60 20" stroke="${c}" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.7"/>`,
+    desc: { es: 'Bacilo Gram+ bifurcado en Y. Domina la microbiota del lactante. Hidroliza HMO de la leche materna. Programa el sistema inmune neonatal.', en: 'Y-shaped Gram+ rod. Dominates infant microbiota. Hydrolyzes breast milk HMOs. Programs the neonatal immune system.' },
+    svg: (c) => `
+      <defs>
+        <linearGradient id="bifg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+        </linearGradient>
+        <filter id="bf"><feGaussianBlur stdDeviation="0.8"/></filter>
+      </defs>
+      <!-- Glow halo -->
+      <path d="M50 90 L50 50 L28 18" stroke="${c}" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.12" filter="url(#bf)"/>
+      <path d="M50 50 L72 18" stroke="${c}" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.1" filter="url(#bf)"/>
+      <!-- Main stem -->
+      <path d="M50 88 L50 50" stroke="url(#bifg)" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <path d="M50 88 L50 50" stroke="${c}" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.9"/>
+      <!-- Left arm -->
+      <path d="M50 50 L29 20" stroke="url(#bifg)" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M50 50 L29 20" stroke="${c}" stroke-width="11" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <!-- Right arm -->
+      <path d="M50 50 L71 20" stroke="url(#bifg)" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M50 50 L71 20" stroke="${c}" stroke-width="11" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <!-- Highlight streaks -->
+      <path d="M47 85 L47 52" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.35"/>
+      <path d="M47 48 L31 23" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+      <path d="M53 48 L69 23" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+      <!-- Nucleoid -->
+      <ellipse cx="50" cy="68" rx="4" ry="7" fill="white" opacity="0.2"/>
+      <!-- Second bacterium -->
+      <path d="M75 95 L75 62 L60 38" stroke="${c}" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.55"/>
+      <path d="M75 62 L88 38" stroke="${c}" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.5"/>`,
   },
   {
     id: 'akkerm', name: 'Akkermansia muciniphila', shape: 'coccus', color: '#fb923c', gram: '-', size: 9,
-    desc: { es: 'Coco Gram- oval de 1μm. Anaerobio estricto. Único habitante de la capa de mucina.', en: 'Oval Gram- coccus of 1μm. Strict anaerobe. Sole inhabitant of the mucin layer.' },
-    svg: (c) => `<ellipse cx="50" cy="55" rx="25" ry="22" fill="${c}" opacity="0.85"/>
-      <ellipse cx="75" cy="40" rx="20" ry="18" fill="${c}" opacity="0.75"/>
-      <ellipse cx="30" cy="35" rx="18" ry="16" fill="${c}" opacity="0.7"/>`,
+    desc: { es: 'Coco Gram− oval de ~1 μm. Anaerobio estricto. Único habitante estable de la capa de mucina. Alta correlación con menor obesidad y mejor control glucémico.', en: 'Oval Gram− coccus of ~1 μm. Strict anaerobe. Only stable inhabitant of the mucin layer. High correlation with less obesity and better glycemic control.' },
+    svg: (c) => `
+      <defs>
+        <radialGradient id="akg1" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.6"/>
+          <stop offset="50%" stop-color="${c}" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+        </radialGradient>
+        <radialGradient id="akg2" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="0.95"/>
+        </radialGradient>
+        <filter id="akf"><feGaussianBlur stdDeviation="1"/></filter>
+      </defs>
+      <!-- Mucin layer suggestion -->
+      <ellipse cx="50" cy="60" rx="46" ry="36" fill="${c}" opacity="0.06" filter="url(#akf)"/>
+      <!-- Outer membrane highlight ring (Gram−) -->
+      <ellipse cx="50" cy="57" rx="28" ry="24" fill="none" stroke="${c}" stroke-width="2.5" opacity="0.3"/>
+      <!-- Main coccus -->
+      <ellipse cx="50" cy="57" rx="24" ry="20" fill="url(#akg1)"/>
+      <ellipse cx="50" cy="57" rx="24" ry="20" fill="none" stroke="${c}" stroke-width="1.5" opacity="0.8"/>
+      <!-- Specular highlight -->
+      <ellipse cx="43" cy="49" rx="8" ry="6" fill="white" opacity="0.3"/>
+      <!-- Nucleoid -->
+      <ellipse cx="50" cy="59" rx="8" ry="6" fill="${c}" opacity="0.35"/>
+      <!-- Second coccus -->
+      <ellipse cx="78" cy="38" rx="18" ry="15" fill="url(#akg2)"/>
+      <ellipse cx="78" cy="38" rx="18" ry="15" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.7"/>
+      <ellipse cx="72" cy="32" rx="5" ry="4" fill="white" opacity="0.28"/>
+      <!-- Third coccus (smaller) -->
+      <ellipse cx="24" cy="36" rx="14" ry="12" fill="url(#akg2)" opacity="0.85"/>
+      <ellipse cx="24" cy="36" rx="14" ry="12" fill="none" stroke="${c}" stroke-width="1" opacity="0.6"/>
+      <ellipse cx="20" cy="31" rx="4" ry="3" fill="white" opacity="0.25"/>`,
   },
   {
     id: 'cdiff', name: 'Clostridioides difficile', shape: 'spore', color: '#f87171', gram: '+', size: 14,
-    desc: { es: 'Bacilo Gram+ formador de esporas. Las esporas son resistentes al calor y desinfectantes comunes.', en: 'Spore-forming Gram+ rod. Spores are resistant to heat and common disinfectants.' },
-    svg: (c) => `<rect x="15" y="38" width="55" height="25" rx="12" fill="${c}" opacity="0.85"/>
-      <ellipse cx="75" cy="50" rx="14" ry="16" fill="${c}cc" stroke="${c}" strokeWidth="3"/>
-      <rect x="30" y="68" width="50" height="22" rx="11" fill="${c}" opacity="0.7"/>
-      <ellipse cx="84" cy="80" rx="12" ry="14" fill="${c}aa" stroke="${c}" strokeWidth="3"/>`,
+    desc: { es: 'Bacilo Gram+ formador de esporas subterminal. Esporas resistentes a calor, alcohol y desinfectantes. Produce toxinas A y B que destruyen el epitelio intestinal.', en: 'Subterminal spore-forming Gram+ rod. Spores resistant to heat, alcohol and disinfectants. Produces toxins A and B that destroy the intestinal epithelium.' },
+    svg: (c) => `
+      <defs>
+        <radialGradient id="cdg1" cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+        </radialGradient>
+        <radialGradient id="cdg2" cx="35%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#fef2f2" stop-opacity="0.9"/>
+          <stop offset="60%" stop-color="${c}" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#991b1b" stop-opacity="1"/>
+        </radialGradient>
+        <filter id="cdf"><feGaussianBlur stdDeviation="0.7"/></filter>
+      </defs>
+      <!-- Halo -->
+      <rect x="10" y="36" width="58" height="22" rx="11" fill="${c}" opacity="0.15" filter="url(#cdf)"/>
+      <!-- Vegetative rod body -->
+      <rect x="12" y="38" width="54" height="18" rx="9" fill="url(#cdg1)"/>
+      <rect x="12" y="38" width="54" height="18" rx="9" fill="none" stroke="${c}" stroke-width="1.3" opacity="0.75"/>
+      <!-- Internal organelles hint -->
+      <ellipse cx="30" cy="47" rx="7" ry="5" fill="white" opacity="0.18"/>
+      <ellipse cx="48" cy="47" rx="5" ry="4" fill="${c}" opacity="0.3"/>
+      <!-- Spore (subterminal swelling) -->
+      <ellipse cx="73" cy="47" rx="16" ry="19" fill="url(#cdg2)"/>
+      <ellipse cx="73" cy="47" rx="16" ry="19" fill="none" stroke="#991b1b" stroke-width="2" opacity="0.7"/>
+      <!-- Spore cortex ring -->
+      <ellipse cx="73" cy="47" rx="11" ry="13" fill="none" stroke="#fca5a5" stroke-width="1.5" opacity="0.5"/>
+      <!-- Spore core -->
+      <ellipse cx="73" cy="47" rx="6" ry="7" fill="#fca5a5" opacity="0.4"/>
+      <!-- Spore highlight -->
+      <ellipse cx="68" cy="41" rx="4" ry="5" fill="white" opacity="0.3"/>
+      <!-- Second bacterium below -->
+      <rect x="20" y="64" width="48" height="16" rx="8" fill="url(#cdg1)" opacity="0.7"/>
+      <rect x="20" y="64" width="48" height="16" rx="8" fill="none" stroke="${c}" stroke-width="1" opacity="0.5"/>
+      <ellipse cx="74" cy="72" rx="13" ry="15" fill="${c}" opacity="0.55"/>
+      <ellipse cx="74" cy="72" rx="13" ry="15" fill="none" stroke="#991b1b" stroke-width="1.5" opacity="0.5"/>`,
   },
   {
     id: 'helico', name: 'Helicobacter pylori', shape: 'helix', color: '#c084fc', gram: '-', size: 8,
-    desc: { es: 'Bacilo Gram- espiral de 3-5μm. Sus flagelos le permiten penetrar el moco gástrico.', en: 'Spiral Gram- rod of 3-5μm. Its flagella allow it to penetrate gastric mucus.' },
-    svg: (c) => `<path d="M15 60 Q30 30 50 50 Q70 70 85 40" stroke="${c}" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.85"/>
-      <path d="M80 35 L90 25 M80 35 L92 42" stroke="${c}" strokeWidth="5" strokeLinecap="round"/>
-      <path d="M12 65 L3 55 M12 65 L2 72" stroke="${c}" strokeWidth="5" strokeLinecap="round"/>`,
+    desc: { es: 'Bacilo Gram− espiral de 3–5 μm con 4–6 flagelos monopolares en penacho. Ureasa neutraliza el ácido gástrico (pH 1–3). Coloniza al 50% de la humanidad.', en: 'Spiral Gram− rod of 3–5 μm with 4–6 monopolar flagella in a tuft. Urease neutralizes gastric acid (pH 1–3). Colonizes 50% of humanity.' },
+    svg: (c) => `
+      <defs>
+        <linearGradient id="hlg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="${c}" stop-opacity="1"/>
+        </linearGradient>
+        <filter id="hlf"><feGaussianBlur stdDeviation="1.2"/></filter>
+      </defs>
+      <!-- Outer membrane (Gram−) glow -->
+      <path d="M12 62 Q28 28 52 50 Q76 72 88 36" stroke="${c}" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.1" filter="url(#hlf)"/>
+      <!-- Periplasmic space hint -->
+      <path d="M12 62 Q28 28 52 50 Q76 72 88 36" stroke="#e9d5ff" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.4"/>
+      <!-- Main helical body -->
+      <path d="M12 62 Q28 28 52 50 Q76 72 88 36" stroke="url(#hlg)" stroke-width="9" stroke-linecap="round" fill="none"/>
+      <path d="M12 62 Q28 28 52 50 Q76 72 88 36" stroke="${c}" stroke-width="9" stroke-linecap="round" fill="none" opacity="0.9"/>
+      <!-- Highlight on helix -->
+      <path d="M15 60 Q30 32 52 51" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.35"/>
+      <!-- Flagellar tuft (4 flagella at one pole) -->
+      <path d="M87 35 Q98 22 94 10" stroke="${c}" stroke-width="1.8" fill="none" opacity="0.7"/>
+      <path d="M87 35 Q100 28 100 14" stroke="${c}" stroke-width="1.5" fill="none" opacity="0.6"/>
+      <path d="M87 35 Q102 34 105 20" stroke="${c}" stroke-width="1.4" fill="none" opacity="0.55"/>
+      <path d="M87 35 Q98 38 100 24" stroke="${c}" stroke-width="1.3" fill="none" opacity="0.5"/>
+      <!-- Flagella tips -->
+      <circle cx="94" cy="10" r="1.5" fill="${c}" opacity="0.7"/>
+      <circle cx="100" cy="14" r="1.5" fill="${c}" opacity="0.6"/>
+      <circle cx="105" cy="20" r="1.5" fill="${c}" opacity="0.55"/>
+      <!-- Second helix (faded) -->
+      <path d="M8 80 Q22 50 44 68 Q66 86 78 55" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.3"/>`,
   },
   {
     id: 'faecali', name: 'Faecalibacterium prausnitzii', shape: 'rod', color: '#34d399', gram: '+', size: 11,
-    desc: { es: 'Bacilo Gram+ de 2-5μm. Produce el 20% del butirato colónico total. Extremadamente sensible al oxígeno.', en: 'Gram+ rod of 2-5μm. Produces 20% of total colonic butyrate. Extremely oxygen-sensitive.' },
-    svg: (c) => `<rect x="25" y="40" width="65" height="22" rx="11" fill="${c}" opacity="0.85"/>
-      <line x1="38" y1="40" x2="30" y2="28" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="55" y1="40" x2="50" y2="26" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="70" y1="40" x2="68" y2="26" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="38" y1="62" x2="30" y2="74" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="55" y1="62" x2="50" y2="76" stroke="${c}" strokeWidth="4" strokeLinecap="round"/>`,
+    desc: { es: 'Bacilo Gram+ de 2–5 μm. Produce el 20% del butirato colónico total. Marcador de salud intestinal. Extremadamente sensible al oxígeno (muere en minutos).', en: 'Gram+ rod of 2–5 μm. Produces 20% of total colonic butyrate. Marker of gut health. Extremely oxygen-sensitive (dies within minutes).' },
+    svg: (c) => `
+      <defs>
+        <radialGradient id="fpg" cx="38%" cy="28%" r="65%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.6"/>
+          <stop offset="55%" stop-color="${c}" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#059669" stop-opacity="1"/>
+        </radialGradient>
+        <filter id="fpf"><feGaussianBlur stdDeviation="0.8"/></filter>
+      </defs>
+      <!-- Halo -->
+      <rect x="18" y="35" width="70" height="28" rx="14" fill="${c}" opacity="0.15" filter="url(#fpf)"/>
+      <!-- Main rod body -->
+      <rect x="20" y="37" width="66" height="24" rx="12" fill="url(#fpg)"/>
+      <rect x="20" y="37" width="66" height="24" rx="12" fill="none" stroke="#059669" stroke-width="1.5" opacity="0.75"/>
+      <!-- Peptidoglycan thickness (Gram+) inner membrane -->
+      <rect x="23" y="40" width="60" height="18" rx="9" fill="none" stroke="#6ee7b7" stroke-width="1" opacity="0.4"/>
+      <!-- Nucleoid region -->
+      <ellipse cx="53" cy="49" rx="16" ry="7" fill="${c}" opacity="0.25"/>
+      <!-- Specular highlight -->
+      <ellipse cx="40" cy="42" rx="12" ry="5" fill="white" opacity="0.3"/>
+      <!-- Peritrichous flagella -->
+      <path d="M30 37 Q22 26 28 16 Q34 7 26 2" stroke="${c}" stroke-width="1" fill="none" opacity="0.6"/>
+      <path d="M50 37 Q44 24 50 14 Q56 5 48 0" stroke="${c}" stroke-width="1" fill="none" opacity="0.55"/>
+      <path d="M70 37 Q76 24 70 14 Q64 5 72 0" stroke="${c}" stroke-width="1" fill="none" opacity="0.55"/>
+      <path d="M30 61 Q22 72 28 82 Q34 91 26 96" stroke="${c}" stroke-width="1" fill="none" opacity="0.55"/>
+      <path d="M55 61 Q50 74 56 84 Q62 93 54 98" stroke="${c}" stroke-width="1" fill="none" opacity="0.5"/>
+      <path d="M75 61 Q80 72 76 82 Q72 91 80 96" stroke="${c}" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Dividing cell (binary fission) -->
+      <rect x="22" y="68" width="62" height="20" rx="10" fill="${c}" opacity="0.45"/>
+      <rect x="22" y="68" width="62" height="20" rx="10" fill="none" stroke="#059669" stroke-width="1" opacity="0.55"/>
+      <line x1="53" y1="69" x2="53" y2="87" stroke="#059669" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.5"/>`,
   },
 ];
 
@@ -1229,100 +1527,146 @@ function VirtualMicroscope({ lang, isMobile }) {
   const bgColors = { gram: '#fdf4ff', fluorescent: '#0f172a', neutral: '#f8fafc' };
   const displayColor = stainColors[stain];
   const bgColor = bgColors[stain];
-
   const zoomScale = zoom / 40;
 
+  const viewSize = isMobile ? 220 : 270;
+
   return (
-    <div style={{ borderRadius: '30px', background: '#1c1917', padding: isMobile ? '20px' : '32px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)' }}>
+    <div style={{ borderRadius: '30px', background: '#1c1917', padding: isMobile ? '16px' : '32px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)' }}>
       <h3 style={{ margin: '0 0 4px 0', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.3rem', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
         🔬 {lang === 'es' ? 'Microscopio Virtual' : 'Virtual Microscope'}
       </h3>
-      <p style={{ margin: '0 0 16px 0', fontSize: '0.72rem', color: '#78716c', fontWeight: '600' }}>
-        {lang === 'es' ? 'Observa la morfología bacteriana como en laboratorio clínico' : 'Observe bacterial morphology as in a clinical lab'}
+      <p style={{ margin: '0 0 14px 0', fontSize: '0.72rem', color: '#78716c', fontWeight: '600' }}>
+        {lang === 'es' ? 'Morfología bacteriana ultra-realista · Laboratorio clínico virtual' : 'Ultra-realistic bacterial morphology · Virtual clinical lab'}
       </p>
 
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
-        {/* Microscope viewer */}
-        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: isMobile ? 'center' : 'flex-start' }}>
+
+        {/* ── Microscope viewer ── */}
+        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          {/* Outer barrel ring */}
           <div style={{
-            width: isMobile ? '240px' : '280px', height: isMobile ? '240px' : '280px',
-            borderRadius: '50%', overflow: 'hidden',
-            background: bgColor,
-            border: '12px solid #292524',
-            boxShadow: `0 0 0 4px #44403c, 0 0 40px rgba(0,0,0,0.8), inset 0 0 ${brightness}px rgba(255,255,255,${brightness / 200})`,
-            position: 'relative',
-            transition: 'background 0.3s',
+            width: viewSize + 28, height: viewSize + 28,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #57534e, #292524)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 5px #1c1917, 0 8px 40px rgba(0,0,0,0.7)',
           }}>
-            {/* Grid overlay for lens effect */}
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: stain === 'fluorescent' ? 'none' : 'radial-gradient(circle, transparent 60%, rgba(0,0,0,0.15) 100%)', zIndex: 2, pointerEvents: 'none' }} />
-            {/* Crosshair */}
-            <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
-              <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '1px', background: 'rgba(0,0,0,0.12)' }} />
-              <div style={{ position: 'absolute', left: '50%', top: '10%', bottom: '10%', width: '1px', background: 'rgba(0,0,0,0.12)' }} />
+            {/* Inner objective ring */}
+            <div style={{
+              width: viewSize + 12, height: viewSize + 12,
+              borderRadius: '50%',
+              background: 'linear-gradient(225deg, #44403c, #1c1917)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.6)',
+            }}>
+              {/* Lens viewport */}
+              <div style={{
+                width: viewSize, height: viewSize,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                background: bgColor,
+                position: 'relative',
+                transition: 'background 0.4s',
+                boxShadow: stain === 'fluorescent'
+                  ? `inset 0 0 60px rgba(0,0,0,0.95), inset 0 0 20px ${bact.color}22`
+                  : `inset 0 0 40px rgba(0,0,0,0.12)`,
+              }}>
+                {/* Vignette */}
+                <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, transparent 55%, rgba(0,0,0,0.22) 100%)', zIndex: 3, pointerEvents: 'none' }}/>
+                {/* Crosshair */}
+                <div style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none' }}>
+                  <div style={{ position: 'absolute', top: '50%', left: '8%', right: '8%', height: '1px', background: stain === 'fluorescent' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)' }}/>
+                  <div style={{ position: 'absolute', left: '50%', top: '8%', bottom: '8%', width: '1px', background: stain === 'fluorescent' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)' }}/>
+                </div>
+                {/* Bacteria SVG — zoom + brightness/contrast */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transform: `scale(${zoomScale})`,
+                  transition: 'transform 0.35s cubic-bezier(.4,0,.2,1)',
+                  filter: `contrast(${0.75 + contrast / 100}) brightness(${0.45 + brightness / 100})`,
+                }}>
+                  <svg viewBox="0 0 110 110" width="90%" height="90%"
+                    dangerouslySetInnerHTML={{ __html: bact.svg(displayColor) }}/>
+                </div>
+                {/* Fluorescent scan lines */}
+                {stain === 'fluorescent' && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,80,0.025) 4px)', zIndex: 5, pointerEvents: 'none' }}/>
+                )}
+                {/* Gram stain tint overlay */}
+                {stain === 'gram' && (
+                  <div style={{ position: 'absolute', inset: 0, background: bact.gram === '+' ? 'rgba(124,58,237,0.04)' : 'rgba(239,68,68,0.04)', zIndex: 2, pointerEvents: 'none' }}/>
+                )}
+              </div>
             </div>
-            {/* Bacteria SVG */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${zoomScale})`, transition: 'transform 0.3s', filter: `contrast(${0.8 + contrast / 100}) brightness(${0.5 + brightness / 100})` }}>
-              <svg viewBox="0 0 100 100" width="80%" height="80%" dangerouslySetInnerHTML={{ __html: bact.svg(displayColor) }} />
-            </div>
-            {/* Scan line effect */}
-            {stain === 'fluorescent' && (
-              <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,100,0.03) 4px)', zIndex: 4, pointerEvents: 'none' }} />
-            )}
           </div>
-          {/* Microscope body decoration */}
-          <div style={{ fontSize: '0.6rem', color: '#78716c', fontWeight: '700', textAlign: 'center' }}>
-            {lang === 'es' ? `Objetivo: ×${zoom}` : `Objective: ×${zoom}`} | {lang === 'es' ? 'Tinción' : 'Stain'}: {stain === 'gram' ? 'Gram' : stain === 'fluorescent' ? (lang === 'es' ? 'Fluorescente' : 'Fluorescent') : (lang === 'es' ? 'Neutro' : 'Neutral')}
+          {/* Objective label */}
+          <div style={{ fontSize: '0.58rem', color: '#78716c', fontWeight: '700', textAlign: 'center', letterSpacing: '0.04em' }}>
+            {lang === 'es' ? `Objetivo ×${zoom}` : `Objective ×${zoom}`} &nbsp;·&nbsp; {stain === 'gram' ? `Gram ${bact.gram}` : stain === 'fluorescent' ? (lang === 'es' ? 'Fluoresc.' : 'Fluoresc.') : (lang === 'es' ? 'Neutro' : 'Neutral')}
           </div>
         </div>
 
-        {/* Controls + Info */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* ── Controls + Info ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
           {/* Stain selector */}
           <div>
-            <div style={{ fontSize: '0.6rem', color: '#78716c', fontWeight: '800', marginBottom: '6px' }}>{lang === 'es' ? 'TIPO DE TINCIÓN' : 'STAIN TYPE'}</div>
+            <div style={{ fontSize: '0.58rem', color: '#78716c', fontWeight: '800', marginBottom: '6px', letterSpacing: '0.06em' }}>{lang === 'es' ? 'TIPO DE TINCIÓN' : 'STAIN TYPE'}</div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              {[['gram', lang === 'es' ? 'Gram' : 'Gram'], ['fluorescent', lang === 'es' ? 'Fluoresc.' : 'Fluoresc.'], ['neutral', lang === 'es' ? 'Neutro' : 'Neutral']].map(([k, l]) => (
-                <button key={k} onClick={() => setStain(k)} style={{ flex: 1, padding: '7px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '0.68rem', background: stain === k ? 'white' : 'rgba(255,255,255,0.07)', color: stain === k ? '#1c1917' : '#78716c', transition: 'all 0.2s' }}>{l}</button>
+              {[['gram','Gram'],['fluorescent', lang === 'es' ? 'Fluoresc.' : 'Fluoresc.'],['neutral', lang === 'es' ? 'Neutro' : 'Neutral']].map(([k,l]) => (
+                <button key={k} onClick={() => setStain(k)} style={{
+                  flex: 1, padding: '7px 4px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                  fontWeight: '800', fontSize: '0.65rem',
+                  background: stain === k ? 'white' : 'rgba(255,255,255,0.07)',
+                  color: stain === k ? '#1c1917' : '#78716c',
+                  transition: 'all 0.2s',
+                  boxShadow: stain === k ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
+                }}>{l}</button>
               ))}
             </div>
           </div>
 
-          {/* Controls */}
+          {/* Sliders */}
           {[
             { label: { es: 'Zoom', en: 'Zoom' }, val: zoom, set: setZoom, min: 10, max: 100, unit: '×' },
             { label: { es: 'Brillo', en: 'Brightness' }, val: brightness, set: setBrightness, min: 10, max: 100, unit: '%' },
             { label: { es: 'Contraste', en: 'Contrast' }, val: contrast, set: setContrast, min: 0, max: 100, unit: '%' },
           ].map(ctrl => (
             <div key={ctrl.label.es}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#78716c', fontWeight: '800', marginBottom: '4px' }}>
-                <span>{ctrl.label[lang]}</span><span style={{ color: 'white' }}>{ctrl.val}{ctrl.unit}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: '#78716c', fontWeight: '800', marginBottom: '4px' }}>
+                <span>{ctrl.label[lang]}</span>
+                <span style={{ color: 'white' }}>{ctrl.val}{ctrl.unit}</span>
               </div>
               <input type="range" min={ctrl.min} max={ctrl.max} value={ctrl.val}
                 onChange={e => ctrl.set(Number(e.target.value))}
-                style={{ width: '100%', accentColor: bact.color, cursor: 'pointer' }}
-              />
+                style={{ width: '100%', accentColor: bact.color, cursor: 'pointer' }}/>
             </div>
           ))}
 
-          {/* Bacteria info */}
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '12px', border: `1px solid ${bact.color}33` }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-              <div style={{ fontStyle: 'italic', fontWeight: '900', color: 'white', fontSize: '0.82rem' }}>{bact.name}</div>
-              <div style={{ padding: '2px 8px', borderRadius: '8px', background: bact.gram === '+' ? '#7c3aed33' : '#ef444433', color: bact.gram === '+' ? '#c4b5fd' : '#fca5a5', fontWeight: '800', fontSize: '0.55rem', whiteSpace: 'nowrap' }}>Gram {bact.gram}</div>
+          {/* Bacteria info card */}
+          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '12px', border: `1px solid ${bact.color}44`, flex: 1 }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+              <div style={{ fontStyle: 'italic', fontWeight: '900', color: 'white', fontSize: '0.8rem', lineHeight: 1.3 }}>{bact.name}</div>
+              <div style={{ padding: '2px 8px', borderRadius: '8px', background: bact.gram === '+' ? '#7c3aed33' : '#ef444433', color: bact.gram === '+' ? '#c4b5fd' : '#fca5a5', fontWeight: '800', fontSize: '0.55rem', whiteSpace: 'nowrap' }}>
+                Gram {bact.gram}
+              </div>
             </div>
-            <p style={{ margin: 0, fontSize: '0.72rem', color: '#a8a29e', lineHeight: 1.5 }}>{bact.desc[lang]}</p>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: '#a8a29e', lineHeight: 1.55 }}>{bact.desc[lang]}</p>
           </div>
         </div>
       </div>
 
-      {/* Bacteria selector */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+      {/* ── Bacteria selector ── */}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '16px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }}>
         {MICROSCOPE_BACTERIA.map((b, i) => (
           <button key={b.id} onClick={() => setSelected(i)} style={{
-            flex: '0 0 auto', padding: '6px 12px', borderRadius: '10px', border: `1.5px solid ${selected === i ? b.color : 'rgba(255,255,255,0.08)'}`,
+            flex: '0 0 auto', padding: '7px 13px', borderRadius: '10px',
+            border: `1.5px solid ${selected === i ? b.color : 'rgba(255,255,255,0.08)'}`,
             background: selected === i ? `${b.color}22` : 'rgba(255,255,255,0.04)',
-            color: selected === i ? b.color : '#78716c', cursor: 'pointer', fontWeight: '700', fontSize: '0.65rem',
+            color: selected === i ? b.color : '#78716c',
+            cursor: 'pointer', fontWeight: '700', fontSize: '0.62rem',
             whiteSpace: 'nowrap', transition: 'all 0.2s',
+            boxShadow: selected === i ? `0 0 12px ${b.color}44` : 'none',
           }}>
             {b.name.split(' ')[0]}
           </button>
